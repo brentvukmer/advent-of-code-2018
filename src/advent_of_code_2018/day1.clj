@@ -12,17 +12,8 @@
 ;
 ; 0. Create atom (set) to store already seen values
 ; 1. Run reductions on the input with last reduction as the initial value (zero to start).
-; 2. Filter intermediate values found in the atom.
 ; 3. Return first matching intermediate value, if any are found.
 ; 4. Otherwise, store all intermediate values in atom, and repeat steps 1-4
-;
-
-;
-; Use:
-; - let (create atom)
-; - take-while
-; - iterate
-; - reductions
 ;
 
 (defn first-dup
