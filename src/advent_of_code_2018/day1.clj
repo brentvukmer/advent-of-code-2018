@@ -18,13 +18,12 @@
 
 (defn first-dup
   []
-  (let [memo (atom #{})
-        inputs (read-data "day1")]
+  (let [inputs (read-data "day1")]
     (loop [sum-val 0
-           tracker @memo]
+           memo #{}]
       (let [freqs (rest (reductions + sum-val inputs))
-            match (some @memo freqs)]
+            match (some memo freqs)]
         (or
           match
           (recur (last freqs)
-                 (swap! memo clojure.set/union (set freqs))))))))
+                 (clojure.set/union memo (set freqs))))))))
