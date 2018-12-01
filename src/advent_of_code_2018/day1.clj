@@ -21,9 +21,8 @@
   (let [inputs (read-data "day1")]
     (loop [sum-val 0
            memo #{}]
-      (let [freqs (rest (reductions + sum-val inputs))
-            match (some memo freqs)]
+      (let [freqs (rest (reductions + sum-val inputs))]
         (or
-          match
+          (some memo freqs)
           (recur (last freqs)
                  (clojure.set/union memo (set freqs))))))))
