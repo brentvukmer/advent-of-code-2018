@@ -10,15 +10,30 @@
   (apply + (read-data "day1")))
 
 ;
-; 1. Run reductions on the input with 0 as the initial value.
-; 2. Save the intermediate values.
-; 3. Use the last reduction as the new initial value, and reduce input again.
-; 4. Concat the new intermediate values.
-; 5. Stop if a dup is found in the intermediate values.
-; 6. Otherwise, repeat steps 3-6
+; 0. Create atom (set) to store already seen values
+; 1. Run reductions on the input with last reduction as the initial value (zero to start).
+; 2. Filter intermediate values found in the atom.
+; 3. Return first matching intermediate value, if any are found.
+; 4. Otherwise, store all intermediate values in atom, and repeat steps 1-4
 ;
 
-(defn dup-freqs
+;
+; Use:
+; - let (create atom)
+; - take-while
+; - iterate
+; - reductions
+;
+
+(defn first-dup
   []
-  (let [freqs (reductions + (read-data "day1"))]
-    freqs))
+  (let [memo (atom #{})
+        inputs (read-data "day1")]
+    (loop [sum-val 0
+           tracker @memo]
+      (let [freqs (rest (reductions + sum-val inputs))
+            match (some @memo freqs)]
+        (or
+          match
+          (recur (last freqs)
+                 (swap! memo clojure.set/union (set freqs))))))))
