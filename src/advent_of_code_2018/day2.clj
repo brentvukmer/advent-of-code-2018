@@ -28,40 +28,17 @@
 ; What letters are common between the two correct box IDs?
 ;
 
-;
-; Calculate Levenshtein distance between strings.
-; Re-used code from solution http://www.4clojure.com/problem/101
-;
-(defn lev-dist
-  ([s t a]
-   (let [key (into #{} [s t])
-         cached (get @a key)]
-     (or
-       cached
-       (let [count-s (count s)
-             count-t (count t)
-             dist (if (zero? (min count-s count-t))
-                    (max count-s count-t)
-                    (let [trunc-s (drop-last s)
-                          trunc-t (drop-last t)
-                          cost (if (= (last s) (last t)) 0 1)]
-                      (min (inc (lev-dist trunc-s t a))
-                           (inc (lev-dist s trunc-t a))
-                           (+ (lev-dist trunc-s trunc-t a) cost))))]
-         (get (swap! a assoc key dist) key)))))
-  ([s t]
-   (lev-dist s t (atom {}))))
+(defn diff-count
+  [pair]
+  (apply + (apply map #(if (= %1 %2) 0 1) pair)))
 
 (defn find-off-by-one
   [path]
-  (let [memo (atom {})]
-    (->> (read-data path)
-         sort
-         (partition 2 1)
-         (map vec)
-         (map #(vector % (apply lev-dist (conj % memo))))
-         (filter #(= 1 (second %)))
-         ffirst
-         (map seq)
-         (apply map #(if (= %1 %2) %1 nil))
-         (apply str))))
+  (->> (read-data path)
+       sort
+       (partition 2 1)
+       (map #(map seq %))
+       (filter #(= 1 (diff-count %)))
+       first
+       (apply map #(if (= %1 %2) %1 nil))
+       (apply str)))
