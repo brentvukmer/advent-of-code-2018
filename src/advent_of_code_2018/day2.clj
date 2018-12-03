@@ -36,8 +36,8 @@
   [path]
   (->> (read-data path)
        sort
+       (map seq)
        (partition 2 1)
-       (map #(map seq %))
        (filter #(= 1 (diff-count %)))
        first
        (apply map #(if (= %1 %2) %1 nil))
