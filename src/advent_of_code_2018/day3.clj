@@ -14,7 +14,7 @@
 ; The width of the rectangle in inches.
 ; The height of the rectangle in inches.
 
-(defn convert-row
+(defn- convert-row
   [s]
   (let [[id left-dist top-dist width height] (map read-string (rest (first (re-seq #"#(\d+) \@ (\d+),(\d+): (\d+)x(\d+)" s))))]
     {:id id
@@ -37,44 +37,47 @@
 ; - Sum the total area covered by overlaps.
 ;
 
-(defn axis-range
+(defn- axis-range
   [p k]
   (let [c (k p)]
     (apply sorted-set (range (first c) (inc (second c))))))
 
-(defn x-range
+(defn- x-range
   [p]
   (axis-range p :x))
 
-(defn y-range
+(defn- y-range
   [p]
   (axis-range p :y))
 
-(defn adjacent-claims?
-  [i]
-  (or
-    (= 1 count (set (:x i)))
-    (= 1 count (set (:y i)))))
-
-(defn intersection
+(defn- intersection
   [p1 p2]
   (let [x-intersect (set/intersection (x-range p1) (x-range p2))
         y-intersect (set/intersection (y-range p1) (y-range p2))
         x-overlap [(first x-intersect) (last x-intersect)]
-        y-overlap [(first y-intersect) (last y-intersect)]
-        result {:claims [(:id p1) (:id p2)]
-                :x      x-overlap
-                :y      y-overlap}]
-    (if (adjacent-claims? result)
-      nil
-      result)))
+        y-overlap [(first y-intersect) (last y-intersect)]]
+    {:claims [(:id p1) (:id p2)]
+     :x      x-overlap
+     :y      y-overlap}))
+
+(defn- k-adj?
+  [i k]
+  (->> (k i)
+       set
+       count
+       (= 1)))
+
+(defn- adjacent-claims?
+  [i]
+  (or
+    (k-adj? i :x)
+    (k-adj? i :y)))
 
 (defn intersections
-  [path]
-  (let [data (read-data path)]
-    (->> (combo/combinations data 2)
-         (map #(intersection (first %) (second %)))
-         (remove nil?))))
+  [data]
+  (->> (combo/combinations data 2)
+       (map #(intersection (first %) (second %)))
+       (remove adjacent-claims?)))
 
 (comment
   (def test-data (read-data "day3-test"))
