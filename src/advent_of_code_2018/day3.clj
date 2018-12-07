@@ -37,47 +37,57 @@
 ; - Sum the total area covered by overlaps.
 ;
 
-(defn axis-range
+(defn- axis-range
   [p k]
   (let [c (k p)]
     (apply sorted-set (range (first c) (inc (second c))))))
 
-(defn x-range
+(defn- x-range
   [p]
   (axis-range p :x))
 
-(defn y-range
+(defn- y-range
   [p]
   (axis-range p :y))
 
-(defn adjacent-claims?
+(defn- adjacent-claims?
   [i]
   (or
-    (= 1 count (set (:x i)))
-    (= 1 count (set (:y i)))))
+    (= 1 (count (set (:x i))))
+    (= 1 (count (set (:y i))))))
 
-(defn intersection
+(defn- intersection
   [p1 p2]
   (let [x-intersect (set/intersection (x-range p1) (x-range p2))
         y-intersect (set/intersection (y-range p1) (y-range p2))
         x-overlap [(first x-intersect) (last x-intersect)]
         y-overlap [(first y-intersect) (last y-intersect)]
         result {:claims [(:id p1) (:id p2)]
-                :x      x-overlap
-                :y      y-overlap}]
+                :x      [(first x-overlap) (last x-overlap)]
+                :y      [(first y-overlap) (last y-overlap)]}]
     (if (adjacent-claims? result)
       nil
       result)))
 
-(defn intersections
-  [path]
-  (let [data (read-data path)]
-    (->> (combo/combinations data 2)
-         (map #(intersection (first %) (second %)))
-         (remove nil?))))
+(defn overlap-points
+  [data]
+  (->> (combo/combinations data 2)
+       (map #(intersection (first %) (second %)))
+       (remove nil?)
+       (map #(for [x (x-range %)
+                   y (y-range %)]
+               [x y]))
+       first
+       set))
+
+(defn part1
+  [data]
+  (count (overlap-points data)))
 
 (comment
   (def test-data (read-data "day3-test"))
   (def p1 (first test-data))
   (def p2 (second test-data))
-  (def p3 (nth test-data 2)))
+  (def p3 (nth test-data 2))
+  (def data (read-data "day3"))
+  (def points (overlap-points data)))
