@@ -1,7 +1,8 @@
 (ns advent-of-code-2018.day3
   (:require [clojure.java.io :as io]
             [clojure.math.combinatorics :as combo]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [quil.core :as q]))
 
 ;
 ; PART 1
@@ -14,17 +15,31 @@
 ; The width of the rectangle in inches.
 ; The height of the rectangle in inches.
 
-(defn convert-row
+(defn convert-row-raw
   [s]
   (let [[id left-dist top-dist width height] (map read-string (rest (first (re-seq #"#(\d+) \@ (\d+),(\d+): (\d+)x(\d+)" s))))]
-    {:id id
-     :x  [left-dist (+ width left-dist)]
-     :y  [top-dist (+ height top-dist)]}))
+    {:id     id
+     :left   left-dist
+     :top    top-dist
+     :width  width
+     :height height}))
+
+(defn convert-row
+  "Takes the raw row data as input and returns the x and y for the corners."
+  [r]
+  (-> r
+      (dissoc :left :top :width :height)
+      (assoc :x [(:left r) (+ (:width r) (:left r))])
+      (assoc :y [(:top r) (+ (:top r) (:height r))])))
+
+(defn read-raw-data
+  [path]
+  (with-open [rdr (io/reader (io/resource path))]
+    (vec (map convert-row-raw (line-seq rdr)))))
 
 (defn read-data
   [path]
-  (with-open [rdr (io/reader (io/resource path))]
-    (vec (map convert-row (line-seq rdr)))))
+  (map convert-row (read-raw-data path)))
 
 ;
 ; How many square inches of fabric are within two or more claims?
@@ -50,44 +65,100 @@
   [p]
   (axis-range p :y))
 
+(defn- k-adj?
+  [i k]
+  (->> (k i)
+       set
+       count
+       (= 1)))
+
 (defn- adjacent-claims?
   [i]
   (or
-    (= 1 (count (set (:x i))))
-    (= 1 (count (set (:y i))))))
+    (k-adj? i :x)
+    (k-adj? i :y)))
 
 (defn- intersection
   [p1 p2]
   (let [x-intersect (set/intersection (x-range p1) (x-range p2))
-        y-intersect (set/intersection (y-range p1) (y-range p2))
-        x-overlap [(first x-intersect) (last x-intersect)]
-        y-overlap [(first y-intersect) (last y-intersect)]
-        result {:claims [(:id p1) (:id p2)]
-                :x      [(first x-overlap) (last x-overlap)]
-                :y      [(first y-overlap) (last y-overlap)]}]
-    (if (adjacent-claims? result)
-      nil
-      result)))
+        y-intersect (set/intersection (y-range p1) (y-range p2))]
+    {:claims (if (:claims p1)
+               [(first (:claims p1)) (first (:claims p2))]
+               [[(:id p1) (:id p2)]])
+     :x      [(first x-intersect) (last x-intersect)]
+     :y      [(first y-intersect) (last y-intersect)]}))
 
-(defn overlap-points
+
+(defn intersections
   [data]
   (->> (combo/combinations data 2)
        (map #(intersection (first %) (second %)))
-       (remove nil?)
-       (map #(for [x (x-range %)
-                   y (y-range %)]
-               [x y]))
-       first
-       set))
+       (remove adjacent-claims?)
+       set
+       vec))
 
-(defn part1
+(defn area
+  [overlap]
+  (->> (apply - (:x overlap))
+       (* (apply - (:y overlap)))
+       Math/abs))
+
+(defn overlaps-area
   [data]
-  (count (overlap-points data)))
+  (let [overlaps (intersections data)
+        overlaps2 (intersections overlaps)]
+    (- (apply + (map area overlaps))
+       (apply + (map area overlaps2)))))
 
+(defn quil-input
+  [r s]
+  [(:left r) (:top r) (* s (:width r)) (* s (:height r))])
+
+(defn draw-claims
+  ([claims scale]
+   (q/background 255)
+   (doseq [c (map #(quil-input % scale) claims)]
+     (apply q/rect c)))
+  ([claims]
+    (draw-claims claims 1)))
+
+;
+; REPL time-savers
+;
 (comment
   (def test-data (read-data "day3-test"))
   (def p1 (first test-data))
   (def p2 (second test-data))
   (def p3 (nth test-data 2))
+  (def test-area (overlaps-area test-data))
+
   (def data (read-data "day3"))
-  (def points (overlap-points data)))
+  (def overlaps (intersections data))
+
+  ;
+  ; Draw the claims using Quil to visualize how claims overlap.
+  ;
+
+  (q/defsketch test-sketch
+               :size [10 10]
+               :draw (fn [] (draw-claims (read-raw-data "day3-test") 10))
+               :title "Day 3 Test Data"
+               :features [:keep-on-top :resizable])
+
+  (q/defsketch day3-sketch
+               :size [1000 1000]
+               :draw (fn [] (draw-claims (read-raw-data "day3")))
+               :title "Day 3 Data"
+               :features [:keep-on-top :resizable])
+
+
+  (def overlaps2 (intersections overlaps))
+  (def grouped-overlaps (->> (conj
+                               (group-by #(first (:claims %)) overlaps)
+                               (group-by #(second (:claims %)) overlaps))
+                             (into (sorted-map))))
+  (def grouped-overlaps2 (->> overlaps2
+                              (group-by #(dissoc % :claims))
+                              (map #(vector (mapv :claims (second %)) (first %)))
+                              (into {})))
+  (def part1 (overlaps-area data)))
