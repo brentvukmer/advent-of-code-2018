@@ -8,12 +8,19 @@
 ; PART 1
 ;
 
-; All claims have an ID and consist of a single rectangle with edges parallel to the edges of the fabric. Each claim's rectangle is defined as follows:
+; All claims have an ID and consist of a single rectangle
+; with edges parallel to the edges of the fabric.
 ;
-; The number of inches between the left edge of the fabric and the left edge of the rectangle.
-; The number of inches between the top edge of the fabric and the top edge of the rectangle.
-; The width of the rectangle in inches.
-; The height of the rectangle in inches.
+; Each claim's rectangle is defined as follows:
+;
+; - The number of inches between the left edge of the fabric and the left rectangle edge.
+; - The number of inches between the top edge of the fabric and the top rectangle edge.
+; - The width of the rectangle in inches.
+; - The height of the rectangle in inches.
+;
+;
+; How many square inches of fabric are within two or more claims?
+;
 
 (defn convert-row-raw
   [s]
@@ -40,17 +47,6 @@
 (defn read-data
   [path]
   (map convert-row (read-raw-data path)))
-
-;
-; How many square inches of fabric are within two or more claims?
-;
-; - Convert dist + dimensions into graph coordinates
-; - Generate all combinations of rectangles.
-; - Identify overlapping rectangles.
-; - Calculate area for each overlap.
-; - Solve for more than
-; - Sum the total area covered by overlaps.
-;
 
 (defn- axis-range
   [p k]
@@ -110,22 +106,64 @@
     (- (apply + (map area overlaps))
        (apply + (map area overlaps2)))))
 
-(defn quil-input
-  [r s]
-  [(:left r) (:top r) (* s (:width r)) (* s (:height r))])
-
+;
+; Quil functions for visualizing claims
+;
 (defn draw-claims
-  ([claims scale]
-   (q/background 255)
-   (doseq [c (map #(quil-input % scale) claims)]
-     (apply q/rect c)))
-  ([claims]
-    (draw-claims claims 1)))
+  [claims]
+  ; Make the line black
+  (q/stroke 0 0 0)
+  (doseq [c claims]
+    (let [left (:left c)
+          top (:top c)
+          width (:width c)
+          height (:height c)]
+      ; Draw each line in the rectangle so that intersections don't get covered
+      (q/line [left top] [(+ width left) top])
+      (q/line [(+ width left) top] [(+ width left) (+ height top)])
+      (q/line [(+ width left) (+ height top)] [left (+ height top)])
+      (q/line [left (+ height top)] [left top]))))
+
+; 'setup' is a cousin of 'draw' function
+; setup initialises sketch and it is called only once
+; before draw called for the first time
+(defn setup
+  [rate]
+  ; draw will be called at this rate (per second)
+  (q/frame-rate rate)
+  ; set background to white colour only in the setup
+  ; otherwise each invocation of 'draw' would clear sketch completely
+  (q/background 255))
+
+(defn draw-sweep-line
+  ([size color x]
+   (apply q/stroke color)
+   (q/line [x 0] [x size]))
+  ([size]
+    ; Make the line semi-transparent red by default
+   (draw-sweep-line size [255 0 0 120] (mod (q/frame-count) size))))
+
+(defn clear-sweep-lines
+  [size x]
+  (q/stroke 255 255 255)
+  (q/line [size 0] [size size])
+  (doseq [x- (range 0 x)]
+    (q/line [x- 0] [x- size])))
+
+(defn draw-claims-with-line
+  [size data]
+  (do
+    (clear-sweep-lines size (mod (q/frame-count) size))
+    (draw-claims (sort-by :left data))
+    (draw-sweep-line size)))
 
 ;
 ; REPL time-savers
 ;
 (comment
+  ;
+  ; Read inputs
+  ;
   (def test-data (read-data "day3-test"))
   (def p1 (first test-data))
   (def p2 (second test-data))
@@ -133,25 +171,37 @@
   (def test-area (overlaps-area test-data))
 
   (def data (read-data "day3"))
-  (def overlaps (intersections data))
 
   ;
   ; Draw the claims using Quil to visualize how claims overlap.
   ;
-
+  (def raw-test-data (read-raw-data "day3-test"))
   (q/defsketch test-sketch
                :size [10 10]
-               :draw (fn [] (draw-claims (read-raw-data "day3-test") 10))
-               :title "Day 3 Test Data"
-               :features [:keep-on-top :resizable])
+               :draw (fn [] (draw-claims-with-line 10 raw-test-data))
+               :setup (fn [] (setup 60))
+               :features [:resizable])
 
   (q/defsketch day3-sketch
-               :size [1000 1000]
-               :draw (fn [] (draw-claims (read-raw-data "day3")))
-               :title "Day 3 Data"
-               :features [:keep-on-top :resizable])
+               :size [1100 1100]
+               :draw (fn [] (draw-claims-with-line 1100 raw-data))
+               :setup (fn [] (setup 120))
+               :features [:resizable])
+
+  ;
+  ; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
+  ;
+  ; Use a sweep line algorithm along with an interval tree
+  ; to test for (interval)-(set of intervals) collision in O(log(n))
+  ;
+  ; Determine total intersection area for each cluster.
+  ;
 
 
+  ;
+  ; Find claim-intersection clusters.
+  ;
+  (def overlaps (intersections data))
   (def overlaps2 (intersections overlaps))
   (def grouped-overlaps (->> (conj
                                (group-by #(first (:claims %)) overlaps)
@@ -161,4 +211,5 @@
                               (group-by #(dissoc % :claims))
                               (map #(vector (mapv :claims (second %)) (first %)))
                               (into {})))
+
   (def part1 (overlaps-area data)))
