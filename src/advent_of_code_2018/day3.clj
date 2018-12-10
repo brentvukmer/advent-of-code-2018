@@ -46,7 +46,6 @@
   [path]
   (with-open [rdr (io/reader (io/resource path))]
     (->> (map convert-row-raw (line-seq rdr))
-         (sort-by :left)
          vec)))
 
 (defn read-data
@@ -54,33 +53,42 @@
   (map convert-row (read-raw-data path)))
 
 ;
-; Use a sweep-line approach to calculate the overlapping claim area.
-;  - https://en.wikipedia.org/wiki/Sweep_line_algorithm
 ;
+; Use a sweep line algorithm along with an interval tree
+; to create, extend and close "claim intersection area" rectangles.
+;  - https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
+;
+; Sort the claims first by x and then by y.
+; Create an interval tree to store the claims by y-interval.
+; Sweep a vertical line across the canvas.
+; For each value of y, look up claims by y-interval.
+; If the previous y had no intersecting claims and the current y does:
+;     - If there is already an existing "claim intersection area" rectangle, extend it
+;     - Otherwise start a new "claim intersection area" rectangle
+;  If the previous y had intersecting claims and the current y does not:
+;     - Close the existing "claim intersection area" rectangle
+;
+; SWEEP LINE
 ; Sweep line algorithms are used in solving planar problems.
+;  - https://en.wikipedia.org/wiki/Sweep_line_algorithm
 ; The basic outline of a sweep line algorithm is as follows:
 ;     - Sweep a line across problem plane.
 ;     - As the line sweeps across the plane, events of interest occur.
 ;     - Keep track of these events.
 ;     - Deal with events that occur at the line leaving a solved problem behind.
 ;
-; Sort the claims by x.
-; Create an interval tree to store the claims by y-interval:
+; INTERVAL TREES
 ;    "Given a set of n intervals on the number line,
 ;     we want to construct a data structure so that we can efficiently
 ;     retrieve all intervals overlapping another interval or point."
-; See:
-;    - http://www.cs.tufts.edu/comp/163/notes05/seg_intersection_handout.pdf
-;    - https://en.wikipedia.org/wiki/Interval_tree
-;    - http://www.dgp.toronto.edu/people/JamesStewart/378notes/22intervals/
 ;
-; Sweep a vertical line across the canvas.
-; For each value of x, move down the line looking up claims by y-interval.
-; Track the "scanning in process" claim-overlap rectangles.
-; Construct each claim-overlap rectangle out of points contained in more than one claim.
-; Construct a new claim-overlap rectangle when the y-interval changes.
-; Sum the areas of the claim-overlap rectangles.
+;    See:
+;       - http://www.cs.tufts.edu/comp/163/notes05/seg_intersection_handout.pdf
+;       - https://en.wikipedia.org/wiki/Interval_tree
+;      - http://www.dgp.toronto.edu/people/JamesStewart/378notes/22intervals/
 ;
+
+
 
 
 (defn- axis-range
@@ -175,8 +183,8 @@
    (apply q/stroke color)
    (q/line [x 0] [x size]))
   ([size]
-    ; Make the line semi-transparent red by default
-   (draw-sweep-line size [255 0 0 120] (mod (q/frame-count) size))))
+    ; Make the line red by default
+   (draw-sweep-line size [255 0 0] (mod (q/frame-count) size))))
 
 (defn clear-sweep-lines
   [size x]
@@ -211,28 +219,21 @@
   ; Draw the claims using Quil to visualize how claims overlap.
   ;
   (def raw-test-data (read-raw-data "day3-test"))
+  (def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
   (q/defsketch test-sketch
                :size [10 10]
-               :draw (fn [] (draw-claims-with-line 10 raw-test-data))
+               :draw (fn [] (draw-claims-with-line 10 sorted-test-data))
                :setup (fn [] (setup 60))
                :features [:resizable])
 
   (def raw-data (read-raw-data "day3"))
+  (def sorted-data (sort-by (juxt :left :top) raw-data))
+  (def sample (take 1000 sorted-data))
   (q/defsketch day3-sketch
                :size [1100 1100]
-               :draw (fn [] (draw-claims-with-line 1100 raw-data))
-               :setup (fn [] (setup 120))
+               :draw (fn [] (draw-claims-with-line 1100 sorted-data))
+               :setup (fn [] (setup 60))
                :features [:resizable])
-
-  ;
-  ; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
-  ;
-  ; Use a sweep line algorithm along with an interval tree
-  ; to test for (interval)-(set of intervals) collision in O(log(n))
-  ;
-  ; Determine total intersection area for each cluster.
-  ;
-
 
   ;
   ; Find claim-intersection clusters.
