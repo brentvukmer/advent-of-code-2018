@@ -1,3 +1,6 @@
+;
+; https://adventofcode.com/2018/day/3
+;
 (ns advent-of-code-2018.day3
   (:require [clojure.java.io :as io]
             [clojure.math.combinatorics :as combo]
@@ -42,11 +45,43 @@
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-    (vec (map convert-row-raw (line-seq rdr)))))
+    (->> (map convert-row-raw (line-seq rdr))
+         (sort-by :left)
+         vec)))
 
 (defn read-data
   [path]
   (map convert-row (read-raw-data path)))
+
+;
+; Use a sweep-line approach to calculate the overlapping claim area.
+;  - https://en.wikipedia.org/wiki/Sweep_line_algorithm
+;
+; Sweep line algorithms are used in solving planar problems.
+; The basic outline of a sweep line algorithm is as follows:
+;     - Sweep a line across problem plane.
+;     - As the line sweeps across the plane, events of interest occur.
+;     - Keep track of these events.
+;     - Deal with events that occur at the line leaving a solved problem behind.
+;
+; Sort the claims by x.
+; Create an interval tree to store the claims by y-interval:
+;    "Given a set of n intervals on the number line,
+;     we want to construct a data structure so that we can efficiently
+;     retrieve all intervals overlapping another interval or point."
+; See:
+;    - http://www.cs.tufts.edu/comp/163/notes05/seg_intersection_handout.pdf
+;    - https://en.wikipedia.org/wiki/Interval_tree
+;    - http://www.dgp.toronto.edu/people/JamesStewart/378notes/22intervals/
+;
+; Sweep a vertical line across the canvas.
+; For each value of x, move down the line looking up claims by y-interval.
+; Track the "scanning in process" claim-overlap rectangles.
+; Construct each claim-overlap rectangle out of points contained in more than one claim.
+; Construct a new claim-overlap rectangle when the y-interval changes.
+; Sum the areas of the claim-overlap rectangles.
+;
+
 
 (defn- axis-range
   [p k]
@@ -154,7 +189,7 @@
   [size data]
   (do
     (clear-sweep-lines size (mod (q/frame-count) size))
-    (draw-claims (sort-by :left data))
+    (draw-claims data)
     (draw-sweep-line size)))
 
 ;
@@ -182,6 +217,7 @@
                :setup (fn [] (setup 60))
                :features [:resizable])
 
+  (def raw-data (read-raw-data "day3"))
   (q/defsketch day3-sketch
                :size [1100 1100]
                :draw (fn [] (draw-claims-with-line 1100 raw-data))
