@@ -25,7 +25,7 @@
 ; How many square inches of fabric are within two or more claims?
 ;
 
-(defn convert-row-raw
+(defn parse-input-row
   [s]
   (let [[id left-dist top-dist width height] (map read-string (rest (first (re-seq #"#(\d+) \@ (\d+),(\d+): (\d+)x(\d+)" s))))]
     {:id     id
@@ -34,23 +34,11 @@
      :width  width
      :height height}))
 
-(defn convert-row
-  "Takes the raw row data as input and returns the x and y for the corners."
-  [r]
-  (-> r
-      (dissoc :left :top :width :height)
-      (assoc :x [(:left r) (+ (:width r) (:left r))])
-      (assoc :y [(:top r) (+ (:top r) (:height r))])))
-
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-    (->> (map convert-row-raw (line-seq rdr))
+    (->> (map parse-input-row (line-seq rdr))
          vec)))
-
-(defn read-data
-  [path]
-  (map convert-row (read-raw-data path)))
 
 ;
 ;
@@ -69,15 +57,7 @@
 ;     - Close the existing "claim intersection area" rectangle
 ; NOTE: Does this approach handle the case where a new "claim intersection area" rectangle starts due a different y-interval (smaller/bigger)?
 ;
-; SWEEP LINE
-; Sweep line algorithms are used in solving planar problems.
-;  - https://en.wikipedia.org/wiki/Sweep_line_algorithm
-;
-; The basic outline of a sweep line algorithm is as follows:
-;     - Sweep a line across problem plane.
-;     - As the line sweeps across the plane, events of interest occur.
-;     - Keep track of these events.
-;     - Deal with events that occur at the line leaving a solved problem behind.
+
 ;
 ; INTERVAL TREES
 ;    "Given a set of n intervals on the number line,
@@ -85,71 +65,30 @@
 ;     retrieve all intervals overlapping another interval or point."
 ;
 ;    See:
-;       - http://www.cs.tufts.edu/comp/163/notes05/seg_intersection_handout.pdf
-;       - https://en.wikipedia.org/wiki/Interval_tree
+;      - https://en.wikipedia.org/wiki/Interval_tree
 ;      - http://www.dgp.toronto.edu/people/JamesStewart/378notes/22intervals/
+;      - http://clj-me.cgrand.net/2012/03/16/a-poor-mans-interval-tree/
 ;
 
+;
+; SWEEP LINE
+; Sweep line algorithms are used in solving planar problems.
+;   - https://en.wikipedia.org/wiki/Sweep_line_algorithm
+;   - http://www.cs.tufts.edu/comp/163/notes05/seg_intersection_handout.pdf
+;
+; The basic outline of a sweep line algorithm is as follows:
+;   - Sweep a line across problem plane.
+;   - As the line sweeps across the plane, events of interest occur.
+;   - Keep track of these events.
+;   - Deal with events that occur at the line leaving a solved problem behind.
+;
 
-
-
-(defn- axis-range
-  [p k]
-  (let [c (k p)]
-    (apply sorted-set (range (first c) (inc (second c))))))
-
-(defn- x-range
-  [p]
-  (axis-range p :x))
-
-(defn- y-range
-  [p]
-  (axis-range p :y))
-
-(defn- k-adj?
-  [i k]
-  (->> (k i)
-       set
-       count
-       (= 1)))
-
-(defn- adjacent-claims?
-  [i]
-  (or
-    (k-adj? i :x)
-    (k-adj? i :y)))
-
-(defn- intersection
-  [p1 p2]
-  (let [x-intersect (set/intersection (x-range p1) (x-range p2))
-        y-intersect (set/intersection (y-range p1) (y-range p2))]
-    {:claims (if (:claims p1)
-               [(first (:claims p1)) (first (:claims p2))]
-               [[(:id p1) (:id p2)]])
-     :x      [(first x-intersect) (last x-intersect)]
-     :y      [(first y-intersect) (last y-intersect)]}))
-
-
-(defn intersections
-  [data]
-  (->> (combo/combinations data 2)
-       (map #(intersection (first %) (second %)))
-       (remove adjacent-claims?)
-       set
-       vec))
 
 (defn area
   [overlap]
   (->> (apply - (:x overlap))
        (* (apply - (:y overlap)))
        Math/abs))
-
-(defn overlaps-area
-  [data]
-  (let [overlaps (intersections data)
-        overlaps2 (intersections overlaps)]
-    (- (apply + (map area overlaps))
-       (apply + (map area overlaps2)))))
 
 ;
 ; Quil functions for visualizing claims
@@ -235,7 +174,78 @@
                :size [1100 1100]
                :draw (fn [] (draw-claims-with-line 1100 sorted-data))
                :setup (fn [] (setup 60))
-               :features [:resizable])
+               :features [:resizable]))
+
+;
+;
+;
+; Old and busted
+;
+;
+;
+(comment
+  (defn convert-row
+    "Takes the raw row data as input and returns the x and y for the corners."
+    [r]
+    (-> r
+        (dissoc :left :top :width :height)
+        (assoc :x [(:left r) (+ (:width r) (:left r))])
+        (assoc :y [(:top r) (+ (:top r) (:height r))])))
+
+  (defn read-data
+    [path]
+    (map convert-row (read-raw-data path)))
+
+  (defn- axis-range
+    [p k]
+    (let [c (k p)]
+      (apply sorted-set (range (first c) (inc (second c))))))
+
+  (defn- x-range
+    [p]
+    (axis-range p :x))
+
+  (defn- y-range
+    [p]
+    (axis-range p :y))
+
+  (defn- k-adj?
+    [i k]
+    (->> (k i)
+         set
+         count
+         (= 1)))
+
+  (defn- adjacent-claims?
+    [i]
+    (or
+      (k-adj? i :x)
+      (k-adj? i :y)))
+
+  (defn- intersection
+    [p1 p2]
+    (let [x-intersect (set/intersection (x-range p1) (x-range p2))
+          y-intersect (set/intersection (y-range p1) (y-range p2))]
+      {:claims (if (:claims p1)
+                 [(first (:claims p1)) (first (:claims p2))]
+                 [[(:id p1) (:id p2)]])
+       :x      [(first x-intersect) (last x-intersect)]
+       :y      [(first y-intersect) (last y-intersect)]}))
+
+  (defn intersections
+    [data]
+    (->> (combo/combinations data 2)
+         (map #(intersection (first %) (second %)))
+         (remove adjacent-claims?)
+         set
+         vec))
+
+  (defn overlaps-area
+    [data]
+    (let [overlaps (intersections data)
+          overlaps2 (intersections overlaps)]
+      (- (apply + (map area overlaps))
+         (apply + (map area overlaps2)))))
 
   ;
   ; Find claim-intersection clusters.
@@ -252,3 +262,6 @@
                               (into {})))
 
   (def part1 (overlaps-area data)))
+
+
+
