@@ -61,7 +61,7 @@
 ; Sort the claims first by x and then by y.
 ; Create an interval tree to store the claims by y-interval.
 ; Sweep a vertical line across the canvas.
-; For each value of y, look up claims by y-interval.
+; For each value of x, look up claims by y-interval.
 ; If the previous y had no intersecting claims and the current y does:
 ;     - If there is already an existing "claim intersection area" rectangle, extend it
 ;     - Otherwise start a new "claim intersection area" rectangle
