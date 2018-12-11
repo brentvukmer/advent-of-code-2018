@@ -67,10 +67,12 @@
 ;     - Otherwise start a new "claim intersection area" rectangle
 ;  If the previous y had intersecting claims and the current y does not:
 ;     - Close the existing "claim intersection area" rectangle
+; NOTE: Does this approach handle the case where a new "claim intersection area" rectangle starts due a different y-interval (smaller/bigger)?
 ;
 ; SWEEP LINE
 ; Sweep line algorithms are used in solving planar problems.
 ;  - https://en.wikipedia.org/wiki/Sweep_line_algorithm
+;
 ; The basic outline of a sweep line algorithm is as follows:
 ;     - Sweep a line across problem plane.
 ;     - As the line sweeps across the plane, events of interest occur.
