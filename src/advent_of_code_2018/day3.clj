@@ -157,13 +157,25 @@
 ;   - Keep track of these events.
 ;   - Deal with events that occur at the line leaving a solved problem behind.
 ;
+
+;
+; Dirty, dirty logic for identifying "events of interest"
+;
+(defn adjacent?
+  [points]
+  (let [x-sorted (sort-by :x points)]
+    (or (= (first (:x (last x-sorted))) (last (:x (first x-sorted))))
+        (= (first (:y (last x-sorted))) (last (:y (first x-sorted)))))))
+
 (defn claim-intersection-points
   [ivmap x]
-  (let [x-overlaps (sort-by :x (iget ivmap x))
+  (let [x-overlaps (->> (iget ivmap x)
+                        (sort-by :x))
         maybes
         (if (<= (count x-overlaps) 1)
           '()
           (->> x-overlaps
+               ; TODO: Filter adjacent
                (map #(map vector (repeat x) (y-range %)))
                (map #(apply sorted-set %))))]
     (if (<= (count maybes) 1)
@@ -172,6 +184,9 @@
            (map #(apply set/intersection %))
            (filter (comp not empty?))))))
 
+;
+; Sweep algorithm
+;
 (defn intersect-distances
   ([data start end]
    (let [ivmap (build-interval-map data :x)]
@@ -181,10 +196,6 @@
        {:x x :dist (dec (count intersections))})))
   ([data]
    (intersect-distances data 0 1000)))
-
-;
-; Total claim intersection area
-;
 
 (defn claim-overlap-area
   [data]
@@ -260,7 +271,7 @@
   (def test-intersects (intersect-points raw-test-data 0 11))
 
   (def raw-data (read-raw-data "day3"))
-  (def ivmap (build-interval-map raw-data :x))
+  (def prod-ivmap (build-interval-map raw-data :x))
   (def ips (intersect-points raw-data))
   (def xys (map #(assoc (dissoc % :intersections) :ys (map second (:intersections %))) ips))
 
