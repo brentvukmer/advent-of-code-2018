@@ -125,17 +125,25 @@
 
 (defn build-interval-map
   [data k]
-  (let [rows (map convert-row data)])
-  (reduce (fn [iv-map row]
-            (let [vals (k row)]
-              (iassoc iv-map (first vals) (inc (last vals)) row)))
-          empty-interval-map
-          rows))
+  (let [rows (map convert-row data)]
+    (reduce (fn [iv-map row]
+              (let [vals (k row)]
+                (iassoc iv-map (first vals) (inc (last vals)) row)))
+            empty-interval-map
+            rows)))
 
 (defn axis-range
   [p k]
   (let [c (k p)]
     (apply sorted-set (range (first c) (inc (second c))))))
+
+(defn- x-range
+  [p]
+  (axis-range p :x))
+
+(defn- y-range
+  [p]
+  (axis-range p :y))
 
 ;
 ; SWEEP LINE
@@ -149,20 +157,40 @@
 ;   - Keep track of these events.
 ;   - Deal with events that occur at the line leaving a solved problem behind.
 ;
+(defn claim-intersection-points
+  [ivmap x]
+  (let [x-overlaps (sort-by :x (iget ivmap x))
+        maybes
+        (if (<= (count x-overlaps) 1)
+          '()
+          (->> x-overlaps
+               (map #(map vector (repeat x) (y-range %)))
+               (map #(apply sorted-set %))))]
+    (if (<= (count maybes) 1)
+      '()
+      (->> (combo/combinations maybes 2)
+           (map #(apply set/intersection %))
+           (filter (comp not empty?))))))
 
-(defn claim-intersections
-  [ivmap x y]
-  (filter #(some #{y} (axis-range % :y)) (iget ivmap x)))
+(defn intersect-distances
+  ([data start end]
+   (let [ivmap (build-interval-map data :x)]
+     (for [x (range start (inc end))
+           :let [intersections (claim-intersection-points ivmap x) ]
+           :when (> (count intersections) 0)]
+       {:x x :dist (dec (count intersections))})))
+  ([data]
+   (intersect-distances data 0 1000)))
 
 ;
 ; Total claim intersection area
 ;
 
-(defn area
-  [overlap]
-  (->> (apply - (:x overlap))
-       (* (apply - (:y overlap)))
-       Math/abs))
+(defn claim-overlap-area
+  [data]
+  (->> (intersect-distances data)
+       (map :dist)
+       (apply +)))
 
 ;
 ; Quil functions for visualizing claims
@@ -219,21 +247,26 @@
 ; REPL time-savers
 ;
 (comment
-  ;
-  ; Read inputs
-  ;
-  (def test-data (read-data "day3-test"))
-  (def p1 (first test-data))
-  (def p2 (second test-data))
-  (def p3 (nth test-data 2))
-  (def test-area (overlaps-area test-data))
+  ;........
+  ;...2222.
+  ;...2222.
+  ;.11XX22.
+  ;.11XX22.
+  ;.111133.
+  ;.111133.
+  ;........
+  (def raw-test-data (read-raw-data "day3-test"))
+  (def test-ivmap (build-interval-map raw-test-data :x))
+  (def test-intersects (intersect-points raw-test-data 0 11))
 
-  (def data (read-data "day3"))
+  (def raw-data (read-raw-data "day3"))
+  (def ivmap (build-interval-map raw-data :x))
+  (def ips (intersect-points raw-data))
+  (def xys (map #(assoc (dissoc % :intersections) :ys (map second (:intersections %))) ips))
 
   ;
   ; Draw the claims using Quil to visualize how claims overlap.
   ;
-  (def raw-test-data (read-raw-data "day3-test"))
   (def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
   (q/defsketch test-sketch
                :size [10 10]
@@ -241,9 +274,6 @@
                :setup (fn [] (setup 60))
                :features [:resizable])
 
-  (def raw-data (read-raw-data "day3"))
-  (def x-ivmap (build-interval-map raw-data :x))
-  (def y-ivmap (build-interval-map raw-data :y))
 
   (def sorted-data (sort-by (juxt :left :top) raw-data))
   (def sample (take 1000 sorted-data))
@@ -252,81 +282,6 @@
                :draw (fn [] (draw-claims-with-line 1100 sorted-data))
                :setup (fn [] (setup 60))
                :features [:resizable]))
-
-;
-;
-;
-; Old and busted
-;
-;
-;
-(comment
-
-  (defn read-data
-    [path]
-    (map convert-row (read-raw-data path)))
-
-  (defn- x-range
-    [p]
-    (axis-range p :x))
-
-  (defn- y-range
-    [p]
-    (axis-range p :y))
-
-  (defn- k-adj?
-    [i k]
-    (->> (k i)
-         set
-         count
-         (= 1)))
-
-  (defn- adjacent-claims?
-    [i]
-    (or
-      (k-adj? i :x)
-      (k-adj? i :y)))
-
-  (defn- intersection
-    [p1 p2]
-    (let [x-intersect (set/intersection (x-range p1) (x-range p2))
-          y-intersect (set/intersection (y-range p1) (y-range p2))]
-      {:claims (if (:claims p1)
-                 [(first (:claims p1)) (first (:claims p2))]
-                 [[(:id p1) (:id p2)]])
-       :x      [(first x-intersect) (last x-intersect)]
-       :y      [(first y-intersect) (last y-intersect)]}))
-
-  (defn intersections
-    [data]
-    (->> (combo/combinations data 2)
-         (map #(intersection (first %) (second %)))
-         (remove adjacent-claims?)
-         set
-         vec))
-
-  (defn overlaps-area
-    [data]
-    (let [overlaps (intersections data)
-          overlaps2 (intersections overlaps)]
-      (- (apply + (map area overlaps))
-         (apply + (map area overlaps2)))))
-
-  ;
-  ; Find claim-intersection clusters.
-  ;
-  (def overlaps (intersections data))
-  (def overlaps2 (intersections overlaps))
-  (def grouped-overlaps (->> (conj
-                               (group-by #(first (:claims %)) overlaps)
-                               (group-by #(second (:claims %)) overlaps))
-                             (into (sorted-map))))
-  (def grouped-overlaps2 (->> overlaps2
-                              (group-by #(dissoc % :claims))
-                              (map #(vector (mapv :claims (second %)) (first %)))
-                              (into {})))
-
-  (def part1 (overlaps-area data)))
 
 
 
