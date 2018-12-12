@@ -167,6 +167,11 @@
     (or (= (first (:x (last x-sorted))) (last (:x (first x-sorted))))
         (= (first (:y (last x-sorted))) (last (:y (first x-sorted)))))))
 
+;
+; TODO: figure out why this happens:
+; (claim-intersection-points test-ivmap 5)
+; => (#{[5 3] [5 4] [5 5]})
+;
 (defn claim-intersection-points
   [ivmap x]
   (let [x-overlaps (->> (iget ivmap x)
@@ -174,8 +179,7 @@
         maybes
         (if (<= (count x-overlaps) 1)
           '()
-          (->> x-overlaps
-               ; TODO: Filter adjacent
+          (->> (flatten (filter (comp not adjacent?) (combo/combinations x-overlaps 2)))
                (map #(map vector (repeat x) (y-range %)))
                (map #(apply sorted-set %))))]
     (if (<= (count maybes) 1)
