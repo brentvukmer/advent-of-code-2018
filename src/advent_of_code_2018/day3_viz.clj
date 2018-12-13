@@ -88,8 +88,10 @@
 ; Otherwise, draw rectangles using :full-data.
 ;
 ; --- Test intersection-points against just 1 cluster of intersecting claims ---
-; Iterate over some of the simpler ones, before trying to capture and test some of the larger clusters.
-
+; Capture and test the simpler, smaller clusters and get them working, one at a time.
+; Then capture and test some of the larger clusters and get them working.
+; Finally, capture and test some of the most complex clusters and get them working.
+;
 
 ;
 ; REPL time-savers
