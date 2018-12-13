@@ -1,6 +1,8 @@
 # advent-of-code-2018
 
-Clojure solutions for [Advent of Code 2018](https://adventofcode.com/2018)
+My solutions for [Advent of Code 2018](https://adventofcode.com/2018), written in Clojure.   
+
+Other Clojure solutions are [here](https://github.com/adventofcode-clojurians/adventofcode-clojurians).
 
 ## Usage
 

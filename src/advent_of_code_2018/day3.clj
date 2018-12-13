@@ -167,11 +167,6 @@
     (or (= (first (:x (last x-sorted))) (last (:x (first x-sorted))))
         (= (first (:y (last x-sorted))) (last (:y (first x-sorted)))))))
 
-;
-; TODO: figure out why this happens:
-; (claim-intersection-points test-ivmap 5)
-; => (#{[5 3] [5 4] [5 5]})
-;
 (defn claim-intersection-points
   [ivmap x]
   (let [x-overlaps (->> (iget ivmap x)
@@ -204,110 +199,17 @@
    (intersect-points data 0 1000)))
 
 ;
+;TODO: Aggregate points into segments; aggregate segments into rectangles
+;
+
+;
 ; TODO: Group points into rectangles, then calculate area per rectangle, then sum
 ;
-(defn claim-overlap-area
-  [data]
-  (let [ips (intersect-points data)
-        top-left (->> (first ips)
-                      :points
-                      first)
-        bottom-right (->> (last ips)
-                          :points
-                          last)]
-    (* (- (first bottom-right) (first top-left))
-       (- (second bottom-right) (second top-left)))))
+(defn area
+  [top-left bottom-right]
+  (* (- (first bottom-right) (first top-left))
+     (- (second bottom-right) (second top-left))))
 
-;
-; Quil functions for visualizing claims
-;
-(defn draw-claims
-  [claims]
-  ; Make the line black
-  (q/stroke 0 0 0)
-  (doseq [c claims]
-    (let [left (:left c)
-          top (:top c)
-          width (:width c)
-          height (:height c)]
-      ; Draw each line in the rectangle so that intersections don't get covered
-      (q/line [left top] [(+ width left) top])
-      (q/line [(+ width left) top] [(+ width left) (+ height top)])
-      (q/line [(+ width left) (+ height top)] [left (+ height top)])
-      (q/line [left (+ height top)] [left top]))))
-
-; 'setup' is a cousin of 'draw' function
-; setup initialises sketch and it is called only once
-; before draw called for the first time
-(defn setup
-  [rate]
-  ; draw will be called at this rate (per second)
-  (q/frame-rate rate)
-  ; set background to white colour only in the setup
-  ; otherwise each invocation of 'draw' would clear sketch completely
-  (q/background 255))
-
-(defn draw-sweep-line
-  ([size color x]
-   (apply q/stroke color)
-   (q/line [x 0] [x size]))
-  ([size]
-    ; Make the line red by default
-   (draw-sweep-line size [255 0 0] (mod (q/frame-count) size))))
-
-(defn clear-sweep-lines
-  [size x]
-  (q/stroke 255 255 255)
-  (q/line [size 0] [size size])
-  (doseq [x- (range 0 x)]
-    (q/line [x- 0] [x- size])))
-
-(defn draw-claims-with-line
-  [size data]
-  (do
-    (clear-sweep-lines size (mod (q/frame-count) size))
-    (draw-claims data)
-    (draw-sweep-line size)))
-
-;
-; REPL time-savers
-;
-(comment
-  ;........
-  ;...2222.
-  ;...2222.
-  ;.11XX22.
-  ;.11XX22.
-  ;.111133.
-  ;.111133.
-  ;........
-  (def raw-test-data (read-raw-data "day3-test"))
-  (def test-ivmap (build-interval-map raw-test-data :x))
-  (def test-intersects (intersect-points raw-test-data))
-
-  (def raw-data (read-raw-data "day3"))
-  (def prod-ivmap (build-interval-map raw-data :x))
-  (def ips (intersect-points raw-data))
-  (def xys (map #(assoc (dissoc % :intersections) :ys (map second (:intersections %))) ips))
-
-  ;
-  ; Draw the claims using Quil to visualize how claims overlap.
-  ;
-  (def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
-  (q/defsketch test-sketch
-               :size [10 10]
-               :draw (fn [] (draw-claims-with-line 10 sorted-test-data))
-               :setup (fn [] (setup 60))
-               :features [:resizable])
-
-
-  (def sorted-data (sort-by (juxt :left :top) raw-data))
-  (def sample (take 1000 sorted-data))
-  (q/defsketch day3-sketch
-               :size [1100 1100]
-               :draw (fn [] (draw-claims-with-line 1100 sorted-data))
-               :setup (fn [] (setup 60))
-               :features [:resizable]))
 
 
 
