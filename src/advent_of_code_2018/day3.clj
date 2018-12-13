@@ -203,6 +203,9 @@
   ([data]
    (intersect-points data 0 1000)))
 
+;
+; TODO: Group points into rectangles, then calculate area per rectangle, then sum
+;
 (defn claim-overlap-area
   [data]
   (let [ips (intersect-points data)
