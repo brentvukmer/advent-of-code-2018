@@ -81,12 +81,14 @@
 ; Make the draw function take a state param; if an area is selected, update the text box with the current values for
 ; :top-left and :bottom-right coordinates.
 ;
-; --- Draw only rectangles contained in the selection area
+; --- Draw only rectangles contained in the selection area ---
 ; Store :full-data in state as part of setup.
 ; Modify the update function to set :selected-data in state (filter :full-data using :top-left and :bottom-right; if at [0,0], set :selected-data to empty list).
 ; If :top-left and :bottom-right are not at [0, 0], then draw rectangles using :selected-data.
 ; Otherwise, draw rectangles using :full-data.
 ;
+; --- Test intersection-points against just 1 cluster of intersecting claims ---
+; Iterate over some of the simpler ones, before trying to capture and test some of the larger clusters.
 
 
 ;
