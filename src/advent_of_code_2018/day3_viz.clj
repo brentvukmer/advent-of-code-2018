@@ -105,15 +105,15 @@
   ;.111133.
   ;.111133.
   ;........
-  (def raw-test-data (read-raw-data "day3-test"))
-  (def test-ivmap (build-interval-map raw-test-data :x))
-  (def test-ips (intersect-points raw-test-data))
+  (def raw-test-data (day3/read-raw-data "day3-test"))
+  (def test-ivmap (day3/build-interval-map raw-test-data :x))
+  (def test-ips (day3/intersect-points raw-test-data))
   (def test-x-points (into {} (map #(vector (:x %) (:points %)) test-ips)))
   (def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
 
-  (def raw-data (read-raw-data "day3"))
-  (def prod-ivmap (build-interval-map raw-data :x))
-  (def ips (intersect-points raw-data))
+  (def raw-data (day3/read-raw-data "day3"))
+  (def prod-ivmap (day3/build-interval-map raw-data :x))
+  (def ips (day3/intersect-points raw-data))
   (def x-points (into {} (map #(vector (:x %) (:points %)) ips)))
   (def sorted-data (sort-by (juxt :left :top) raw-data))
 
@@ -126,7 +126,6 @@
                :draw (fn [] (draw-claims-with-line 10 sorted-test-data test-x-points))
                :setup (fn [] (setup 60))
                :features [:resizable])
-
 
   (q/defsketch day3-sketch
                :size [1100 1100]
