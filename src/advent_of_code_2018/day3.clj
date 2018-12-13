@@ -162,8 +162,8 @@
 ; Dirty, dirty logic for identifying "events of interest"
 ;
 (defn adjacent?
-  [points]
-  (let [x-sorted (sort-by :x points)]
+  [rects]
+  (let [x-sorted (sort-by :x rects)]
     (or (= (first (:x (last x-sorted))) (last (:x (first x-sorted))))
         (= (first (:y (last x-sorted))) (last (:y (first x-sorted)))))))
 
@@ -177,35 +177,43 @@
   (let [x-overlaps (->> (iget ivmap x)
                         (sort-by :x))
         maybes
-        (if (<= (count x-overlaps) 1)
+        (if (< (count x-overlaps) 2)
           '()
           (->> (flatten (filter (comp not adjacent?) (combo/combinations x-overlaps 2)))
                (map #(map vector (repeat x) (y-range %)))
                (map #(apply sorted-set %))))]
-    (if (<= (count maybes) 1)
+    (if (< (count maybes) 2)
       '()
       (->> (combo/combinations maybes 2)
            (map #(apply set/intersection %))
-           (filter (comp not empty?))))))
+           (filter not-empty)
+           first))))
 
 ;
 ; Sweep algorithm
 ;
-(defn intersect-distances
+(defn intersect-points
   ([data start end]
    (let [ivmap (build-interval-map data :x)]
      (for [x (range start (inc end))
-           :let [intersections (claim-intersection-points ivmap x) ]
-           :when (> (count intersections) 0)]
-       {:x x :dist (dec (count intersections))})))
+           :let [points (claim-intersection-points ivmap x)]
+           :when (not-empty points)]
+       {:x      x
+        :points points})))
   ([data]
-   (intersect-distances data 0 1000)))
+   (intersect-points data 0 1000)))
 
 (defn claim-overlap-area
   [data]
-  (->> (intersect-distances data)
-       (map :dist)
-       (apply +)))
+  (let [ips (intersect-points data)
+        top-left (->> (first ips)
+                      :points
+                      first)
+        bottom-right (->> (last ips)
+                          :points
+                          last)]
+    (* (- (first bottom-right) (first top-left))
+       (- (second bottom-right) (second top-left)))))
 
 ;
 ; Quil functions for visualizing claims
@@ -272,7 +280,7 @@
   ;........
   (def raw-test-data (read-raw-data "day3-test"))
   (def test-ivmap (build-interval-map raw-test-data :x))
-  (def test-intersects (intersect-points raw-test-data 0 11))
+  (def test-intersects (intersect-points raw-test-data))
 
   (def raw-data (read-raw-data "day3"))
   (def prod-ivmap (build-interval-map raw-data :x))
