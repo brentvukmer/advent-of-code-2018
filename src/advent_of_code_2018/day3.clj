@@ -22,16 +22,14 @@
 ; - The width of the rectangle in inches.
 ; - The height of the rectangle in inches.
 ;
-;
 ; How many square inches of fabric are within two or more claims?
 ;
-; DESIGN NOTES
+; DATA NOTES
 ;
 ; The input data is expressed in terms of top-left grid coordinates for claim rectangles.
 ; Howver the fundamental unit for measuring claim area (including intersecting claim areas)
 ; is a 1x1 square. So after parsing the input rows into rectangles using top-left grid coordinates,
 ; we need to create a mapping of x values to 1x1 squares whose left edge is x.
-;
 ;
 ; PROPOSED SOLUTION
 ;
@@ -41,8 +39,8 @@
 ; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
 ;
 ; Parse the input to get the claim rectangle coordinates,
-; Create a map of x values to 1x1 squares whose left edge is x
 ; Create a map of top left corner coordinates -> claim ids.
+; Create a function that selects all keys from that map which match x.
 ; Create an interval tree to store the claims by x-interval.
 ; Sweep a vertical line across the canvas.
 ; For each value of x:

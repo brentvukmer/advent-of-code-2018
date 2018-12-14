@@ -78,25 +78,30 @@
 ;
 
 ;
-; TODO: Use Quil fun mode to update text box in upper righthand corner with top-left and bottom-right corners
+; TODO: Use Quil fun mode to update text box in upper right-hand corner with top-left and bottom-right corners
 ;
 ; Quil fun mode: https://github.com/quil/quil/wiki/Functional-mode-%28fun-mode%29
 ; Quil text display: http://quil.info/api/typography/loading-and-displaying#text
 ;
+; --- Pass in functions along with data
+; Pass in the parsed input rows, the interval-tree, along with the sweep-line function.
+; Sweep-line function should take "state of the grid to the left of x" and return "state of the grid including x".
+; Instead of pre-calculating the intersections, run the sweep-line function live in the draw function.
+;    - Take advantage of REPL reloading goodness.
+;    - Profit.
 ;
 ; --- Display coordinates for selection area ---
-; Use mouse-dragged to capture the corner coordinates (top-left and bottom-right) of the area of interest on the canvas.
-; Use mouse-clicked to set the :top-left and :bottom-right coordinates to [0, 0].
-; Create an update function that updates state with the :top-left and :bottom-right coordinates.
 ; In setup, create a text box in the upper right-hand corner.
-; Make the draw function take a state param; if an area is selected, update the text box with the current values for
-; :top-left and :bottom-right coordinates.
+;   - Store :full-data in state as part of setup.
+; Use mouse-dragged to capture the corner coordinates (top-left and bottom-right) of the area of interest on the canvas.
+; Use mouse-clicked to set the :top-left and :bottom-right coordinates to [0, 0] and selected-data to {}.
+; Create an update function that updates state with the :top-left and :bottom-right coordinates, and then sets :selected-data to the rows in :full-data that match.
+; Make the draw function take a state param.
 ;
 ; --- Draw only rectangles contained in the selection area ---
-; Store :full-data in state as part of setup.
-; Modify the update function to set :selected-data in state (filter :full-data using :top-left and :bottom-right; if at [0,0], set :selected-data to empty list).
-; If :top-left and :bottom-right are not at [0, 0], then draw rectangles using :selected-data.
-; Otherwise, draw rectangles using :full-data.
+; Update draw function to use state:
+;   - If :selected-data is not empty, draw only the rectangles for it.
+;   - Otherwise, draw the rectangles for :full-data.
 ;
 ; --- Test intersection-points against just 1 cluster of intersecting claims ---
 ; Capture and test the simpler, smaller clusters and get them working, one at a time.
