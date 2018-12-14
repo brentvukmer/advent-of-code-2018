@@ -6,6 +6,21 @@
 ;
 ; Quil functions for visualizing claims
 ;
+
+; 'setup' is a cousin of 'draw' function
+; setup initialises sketch and it is called only once
+; before draw called for the first time
+(defn setup
+  [{:keys [target-frame-rate full-data selected-data intersections size corners] :or {target-frame-rate 60 full-data [] selected-data [] intersections {} size [1100 1100] corners [] }}]
+  ; draw will be called at this rate (per second)
+  (q/frame-rate target-frame-rate)
+  ; set background to white colour only in the setup
+  ; otherwise each invocation of 'draw' would clear sketch completely
+  (q/background 255)
+  {:target-frame-rate target-frame-rate
+   :full-data full-data
+   :selected-data selected-data})
+
 (defn draw-claims
   [claims]
   ; Make the line black
@@ -15,22 +30,11 @@
           top (:top c)
           width (:width c)
           height (:height c)]
-      ; Draw each line in the rectangle so that intersections don't get covered
+      ; q/line instead of q/rect so that intersections don't get covered
       (q/line [left top] [(+ width left) top])
       (q/line [(+ width left) top] [(+ width left) (+ height top)])
       (q/line [(+ width left) (+ height top)] [left (+ height top)])
       (q/line [left (+ height top)] [left top]))))
-
-; 'setup' is a cousin of 'draw' function
-; setup initialises sketch and it is called only once
-; before draw called for the first time
-(defn setup
-  [rate]
-  ; draw will be called at this rate (per second)
-  (q/frame-rate rate)
-  ; set background to white colour only in the setup
-  ; otherwise each invocation of 'draw' would clear sketch completely
-  (q/background 255))
 
 (defn draw-sweep-line
   ([size color x]
@@ -47,20 +51,22 @@
     (apply q/point p)))
 
 (defn clear-sweep-lines
-  [size x]
+  [len x]
   (q/stroke 255 255 255)
-  (q/line [size 0] [size size])
+  (q/line [len 0] [len len])
   (doseq [x- (range 0 x)]
-    (q/line [x- 0] [x- size])))
+    (q/line [x- 0] [x- len])))
 
 (defn draw-claims-with-line
-  [size data points]
-  (let [x (mod (q/frame-count) size)]
+  [{:keys [size full-data selected-data intersections]}]
+  (let [len (first size)
+        x (mod (q/frame-count) len)
+        data (if selected-data selected-data full-data)]
     (do
-      (clear-sweep-lines size x)
+      (clear-sweep-lines len x)
       (draw-claims data)
       (doseq [t (range 0 x)]
-        (draw-points (get points t)))
+        (draw-points (get intersections t)))
       (draw-sweep-line size))))
 
 ;
@@ -96,39 +102,45 @@
 ;
 ; REPL time-savers
 ;
-(comment
-  ;........
-  ;...2222.
-  ;...2222.
-  ;.11XX22.
-  ;.11XX22.
-  ;.111133.
-  ;.111133.
-  ;........
-  (def raw-test-data (day3/read-raw-data "day3-test"))
-  (def test-ivmap (day3/build-interval-map raw-test-data :x))
-  (def test-ips (day3/intersect-points raw-test-data))
-  (def test-x-points (into {} (map #(vector (:x %) (:points %)) test-ips)))
-  (def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
+;........
+;...2222.
+;...2222.
+;.11XX22.
+;.11XX22.
+;.111133.
+;.111133.
+;........
+(def raw-test-data (day3/read-raw-data "day3-test"))
+(def test-ivmap (day3/build-interval-map raw-test-data :x))
+(def test-ips (day3/intersect-points raw-test-data))
+(def test-x-points (into {} (map #(vector (:x %) (:points %)) test-ips)))
+(def sorted-test-data (sort-by (juxt :left :top) raw-test-data))
 
-  (def raw-data (day3/read-raw-data "day3"))
-  (def prod-ivmap (day3/build-interval-map raw-data :x))
-  (def ips (day3/intersect-points raw-data))
-  (def x-points (into {} (map #(vector (:x %) (:points %)) ips)))
-  (def sorted-data (sort-by (juxt :left :top) raw-data))
+(def raw-data (day3/read-raw-data "day3"))
+(def prod-ivmap (day3/build-interval-map raw-data :x))
+(def ips (day3/intersect-points raw-data))
+(def x-points (into {} (map #(vector (:x %) (:points %)) ips)))
+(def sorted-data (sort-by (juxt :left :top) raw-data))
 
+;
+; Draw the claims using Quil to visualize how claims overlap.
+;
+(def test-size [10 10])
+(q/defsketch test-sketch
+             :size test-size
+             :draw draw-claims-with-line
+             :setup (fn [] (setup {:target-frame-rate 60
+                                   ::full-data        sorted-test-data
+                                   :intersections     test-x-points
+                                   :size              test-size}))
+             :features [:resizable]
+             :middleware [m/fun-mode])
 
-  ;
-  ; Draw the claims using Quil to visualize how claims overlap.
-  ;
-  (q/defsketch test-sketch
-               :size [10 10]
-               :draw (fn [] (draw-claims-with-line 10 sorted-test-data test-x-points))
-               :setup (fn [] (setup 60))
-               :features [:resizable])
-
-  (q/defsketch day3-sketch
-               :size [1100 1100]
-               :draw (fn [] (draw-claims-with-line 1100 sorted-data x-points))
-               :setup (fn [] (setup 60))
-               :features [:resizable]))
+(q/defsketch day3-sketch
+             :size prod-size
+             :draw draw-claims-with-line
+             :setup (fn [] (setup {:full-data     sorted-data
+                                   :intersections x-points}))
+             :features [:resizable]
+             ;:middleware [m/fun-mode]
+             )
