@@ -27,8 +27,11 @@
 ;
 ; DESIGN NOTES
 ;
-; So the fundamental unit is a 1x1 square.  Parse the input to get the claim rectangle coordinates,
-; but also create map that represents a grid of 1x1 squares. The map entries consist of top left corner coordinates -> claim ids.
+; The input data is expressed in terms of top-left grid coordinates for claim rectangles.
+; Howver the fundamental unit for measuring claim area (including intersecting claim areas)
+; is a 1x1 square. So after parsing the input rows into rectangles using top-left grid coordinates,
+; we need to create a mapping of x values to 1x1 squares whose left edge is x.
+;
 ;
 ; PROPOSED SOLUTION
 ;
@@ -37,10 +40,13 @@
 ;
 ; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
 ;
+; Parse the input to get the claim rectangle coordinates,
+; Create a map of x values to 1x1 squares whose left edge is x
+; Create a map of top left corner coordinates -> claim ids.
 ; Create an interval tree to store the claims by x-interval.
 ; Sweep a vertical line across the canvas.
 ; For each value of x:
-;    - Collect the 1x1 squares whose left edge is on x.
+;    - Get the 1x1 squares whose left edge is on x.
 ;    - Look up claims by x-interval.
 ;    - For each claim:
 ;       - Get the y range.
