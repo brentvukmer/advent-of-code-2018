@@ -70,6 +70,10 @@
       (draw-sweep-line size))))
 
 ;
+; NOTE: Sort the claims first by x and then by y before painting, so that you can paint them in order.
+;
+
+;
 ; TODO: Confirm that we are using the same coordinate system internally as what Quil expects
 ;
 
@@ -78,6 +82,7 @@
 ;
 ; Quil fun mode: https://github.com/quil/quil/wiki/Functional-mode-%28fun-mode%29
 ; Quil text display: http://quil.info/api/typography/loading-and-displaying#text
+;
 ;
 ; --- Display coordinates for selection area ---
 ; Use mouse-dragged to capture the corner coordinates (top-left and bottom-right) of the area of interest on the canvas.

@@ -10,6 +10,7 @@
 ;
 ; PART 1
 ;
+; PROBLEM STATEMENT
 
 ; All claims have an ID and consist of a single rectangle
 ; with edges parallel to the edges of the fabric.
@@ -23,6 +24,29 @@
 ;
 ;
 ; How many square inches of fabric are within two or more claims?
+;
+; DESIGN NOTES
+;
+; So the fundamental unit is a 1x1 square.  Parse the input to get the claim rectangle coordinates,
+; but also create map that represents a grid of 1x1 squares. The map entries consist of top left corner coordinates -> claim ids.
+;
+; PROPOSED SOLUTION
+;
+; Use a sweep line algorithm along with an interval tree to flag 1x1 squares
+; on the grid that belong to at least two claims.
+;
+; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
+;
+; Create an interval tree to store the claims by x-interval.
+; Sweep a vertical line across the canvas.
+; For each value of x:
+;    - Collect the 1x1 squares whose left edge is on x.
+;    - Look up claims by x-interval.
+;    - For each claim:
+;       - Get the y range.
+;    -  - Find the squares whose max/min y values are in the y-range
+;       - Update the map entry for each matching square with the claim id
+;    - Select the 1x1 squares that map to 2 or more claims
 ;
 
 (defn parse-input-row
@@ -47,24 +71,6 @@
       (dissoc :left :top :width :height)
       (assoc :x [(:left r) (+ (:width r) (:left r))])
       (assoc :y [(:top r) (+ (:top r) (:height r))])))
-
-;
-;
-; Use a sweep line algorithm along with an interval tree
-; to create, extend and close "claim intersection area" rectangles.
-;  - https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
-;
-; Sort the claims first by x and then by y.
-; Create an interval tree to store the claims by y-interval.
-; Sweep a vertical line across the canvas.
-; For each value of x, look up claims by y-interval.
-; If the previous y had no intersecting claims and the current y does:
-;     - If there is already an existing "claim intersection area" rectangle, extend it
-;     - Otherwise start a new "claim intersection area" rectangle
-;  If the previous y had intersecting claims and the current y does not:
-;     - Close the existing "claim intersection area" rectangle
-; NOTE: Does this approach handle the case where a new "claim intersection area" rectangle starts due a different y-interval (smaller/bigger)?
-;
 
 ;
 ; INTERVAL TREES
