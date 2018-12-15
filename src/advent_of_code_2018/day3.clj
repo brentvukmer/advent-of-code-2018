@@ -39,9 +39,10 @@
 ; See https://www.reddit.com/r/compsci/comments/kq0jw/overlapping_rectangles/
 ;
 ; Parse the input to get the claim rectangle coordinates,
-; Create a map of top left corner coordinates -> claim ids.
-; Create a function that selects all keys from that map which match x.
 ; Create an interval tree to store the claims by x-interval.
+; Create a map of 1x1 square top left corner coordinates -> claim ids.
+; Create a function that selects all keys from that map which match x.
+;
 ; Sweep a vertical line across the canvas.
 ; For each value of x:
 ;    - Get the 1x1 squares whose left edge is on x.
@@ -207,6 +208,33 @@
         :points points})))
   ([data]
    (intersect-points data 0 1000)))
+
+(defn initial-state
+  [data]
+  (let [ivmap (build-interval-map data :x)]
+    {:ivmap  ivmap
+     :max-xy (->> (vals ivmap)
+                  (apply set/union)
+                  (remove empty?)
+                  (map #(vector (second (:x %)) (second (:y %))))
+                  sort
+                  last)}))
+
+(defn unit-square
+  [[x y]]
+  {:x [x (inc x)] :y [y (inc y)]})
+
+(defn intersect-1x1s
+  [data]
+  (let [init (initial-state data)
+        max-x (first (:max-xy init))
+        max-y (second (:max-xy init))]
+    (for [x (range 0 (inc max-x))
+          :let [y-range (0 (inc max-y))
+                x-overlaps (->> (iget (:ivmap init) x)
+                                (sort-by :x))
+                unit-squares ()]]
+     )))
 
 ;
 ;TODO: Aggregate points into segments; aggregate segments into rectangles
