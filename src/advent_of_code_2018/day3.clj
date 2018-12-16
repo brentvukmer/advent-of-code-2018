@@ -220,3 +220,15 @@
   (def contested (contested-unit-squares (initial-state (read-raw-data "day3") [1100 1100])))
   )
 
+;
+; PART 2
+;
+
+(defn uncontested-claims
+  [data contested-squares]
+  (let [all-claims (apply sorted-set (map :id data))
+        overlapping-claims (apply set/union (map :claims contested-squares))]
+    (set/difference all-claims overlapping-claims)))
+
+
+
