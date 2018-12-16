@@ -98,7 +98,7 @@
                :setup (fn [] (setup {:target-frame-rate 60
                                      :data-path         "day3"
                                      :size              prod-size}))
-               :features [:resizable]
+               :features [:resizable :keep-on-top]
                :middleware [m/fun-mode]
                :mouse-dragged mouse-dragged
                :mouse-clicked mouse-clicked)
