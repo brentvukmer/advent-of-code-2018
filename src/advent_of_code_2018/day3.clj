@@ -168,47 +168,6 @@
 ;   - Keep track of these events.
 ;   - Deal with events that occur at the line leaving a solved problem behind.
 ;
-
-;
-; Dirty, dirty logic for identifying "events of interest"
-;
-(defn adjacent?
-  [rects]
-  (let [x-sorted (sort-by :x rects)]
-    (or (= (first (:x (last x-sorted))) (last (:x (first x-sorted))))
-        (= (first (:y (last x-sorted))) (last (:y (first x-sorted)))))))
-
-(defn claim-intersection-points
-  [ivmap x]
-  (let [x-overlaps (->> (iget ivmap x)
-                        (sort-by :x))
-        maybes
-        (if (< (count x-overlaps) 2)
-          '()
-          (->> (flatten (filter (comp not adjacent?) (combo/combinations x-overlaps 2)))
-               (map #(map vector (repeat x) (y-range %)))
-               (map #(apply sorted-set %))))]
-    (if (< (count maybes) 2)
-      '()
-      (->> (combo/combinations maybes 2)
-           (map #(apply set/intersection %))
-           (filter not-empty)
-           first))))
-
-;
-; Sweep algorithm
-;
-(defn intersect-points
-  ([data start end]
-   (let [ivmap (build-interval-map data :x)]
-     (for [x (range start (inc end))
-           :let [points (claim-intersection-points ivmap x)]
-           :when (not-empty points)]
-       {:x      x
-        :points points})))
-  ([data]
-   (intersect-points data 0 1000)))
-
 (defn initial-state
   [data]
   (let [ivmap (build-interval-map data :x)]
@@ -224,30 +183,34 @@
   [[x y]]
   {:x [x (inc x)] :y [y (inc y)]})
 
-(defn intersect-1x1s
+(defn contained-by?
+  [unit-square rectangle]
+  (and
+    (>= (first (:x unit-square)) (first (:x rectangle)))
+    (<= (second (:x unit-square)) (second (:x rectangle)))
+    (>= (first (:y unit-square)) (first (:y rectangle)))
+    (<= (second (:y unit-square)) (second (:y rectangle)))))
+
+(defn unit-square-claims
+  [init x y-range]
+  (let [x-overlaps (->> (iget (:ivmap init) x)
+                        (sort-by :x))
+        unit-squares (map #(unit-square (vector x %)) y-range)]
+    (map #(hash-map :unit-square %
+                    :claims (->> (filter (fn [r] (contained-by? % r)) x-overlaps)
+                                 (map :id))) unit-squares)))
+
+(defn contested-unit-squares
   [data]
   (let [init (initial-state data)
         max-x (first (:max-xy init))
         max-y (second (:max-xy init))]
-    (for [x (range 0 (inc max-x))
-          :let [y-range (0 (inc max-y))
-                x-overlaps (->> (iget (:ivmap init) x)
-                                (sort-by :x))
-                unit-squares ()]]
-     )))
-
-;
-;TODO: Aggregate points into segments; aggregate segments into rectangles
-;
-
-;
-; TODO: Group points into rectangles, then calculate area per rectangle, then sum
-;
-(defn area
-  [top-left bottom-right]
-  (* (- (first bottom-right) (first top-left))
-     (- (second bottom-right) (second top-left))))
-
+    (->>
+      (for [x (range 0 (inc max-x))
+            :let [y-range (range 0 (inc max-y))]]
+        (unit-square-claims init x y-range))
+      (apply concat)
+      (filter #(>= (count (:claims %)) 2)))))
 
 
 
