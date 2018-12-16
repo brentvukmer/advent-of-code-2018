@@ -17,8 +17,8 @@
   ; set background to white colour only in the setup
   ; otherwise each invocation of 'draw' would clear sketch completely
   (q/background 255)
-  (->> (day3/read-raw-data (:data-path state))
-       (day3/initial-state)
+  (-> (day3/read-raw-data (:data-path state))
+       (day3/initial-state (:size state))
        (conj (assoc state :num-sweeps 0))))
 
 (defn update-state
@@ -28,7 +28,9 @@
 
 (defn mouse-dragged
   [state event]
-  (assoc state :selection [[(:p-x event) (:p-y event)] [(:x event) (:y event)]]))
+  (let [selection [[(:p-x event) (:p-y event)] [(:x event) (:y event)]]]
+    (println "mouse-dragged selection " selection)
+    (assoc state :selection selection)))
 
 (defn mouse-clicked
   [state event]
@@ -48,18 +50,20 @@
 (defn draw-squares
   [squares]
   (q/stroke 255 0 0 120)
-  (doseq [s squares]
-    (let [{{:keys [x y]} :unit-square} s]
-      (q/rect (first x) (first y) (apply - (reverse x)) (apply - (reverse y))))))
+  (if (seq squares)
+    (doseq [s squares]
+      (let [{{:keys [x y]} :unit-square} s]
+        (q/rect (first x) (first y) (apply - (reverse x)) (apply - (reverse y)))))))
 
 (defn draw-claims-with-line
   [state]
+  ; Don't keep sweeping once we've gone across the canvas once
   (if (<= (:num-sweeps state) (first (:size state)))
     (let [x (:x-val state)
           claims (day3/iget (:ivmap state) x)
           squares (->> (day3/unit-square-claims state x)
-                       day3/contested-unit-squares)]
-      (if claims
+                       day3/filter-contested)]
+      (if (seq claims)
         (do
           (draw-claims claims)
           (draw-squares squares))))))

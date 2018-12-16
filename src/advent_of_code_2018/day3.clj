@@ -3,7 +3,6 @@
 ;
 (ns advent-of-code-2018.day3
   (:require [clojure.java.io :as io]
-            [clojure.math.combinatorics :as combo]
             [clojure.set :as set]
             [quil.core :as q]))
 
@@ -169,10 +168,11 @@
 ;   - Deal with events that occur at the line leaving a solved problem behind.
 ;
 (defn initial-state
-  [data]
+  [data size]
   (let [ivmap (build-interval-map data :x)]
     {:full-data data
      :ivmap  ivmap
+     :size size
      :max-xy (->> (vals ivmap)
                   (apply set/union)
                   (remove empty?)
@@ -194,7 +194,7 @@
 
 (defn unit-square-claims
   [init x]
-  (let [max-y (second (:max-xy init))
+  (let [max-y (second (:size init))
         y-range (range 0 (inc max-y))
         unit-squares (map #(unit-square (vector x %)) y-range)
         x-overlaps (->> (iget (:ivmap init) x)
@@ -204,9 +204,19 @@
                                  (map :id)
                                  set)) unit-squares)))
 
-(defn contested-unit-squares
+(defn filter-contested
   [squares]
   (filter #(>= (count (:claims %)) 2) squares))
 
+(defn contested-unit-squares
+  [state]
+  (->>
+    (for [x (range 0 (inc (first (:size state))))]
+      (->> (unit-square-claims state x)
+           filter-contested))
+    (apply concat)))
 
+(comment
+  (def contested (contested-unit-squares (initial-state (read-raw-data "day3") [1100 1100])))
+  )
 
