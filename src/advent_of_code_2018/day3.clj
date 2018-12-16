@@ -171,7 +171,8 @@
 (defn initial-state
   [data]
   (let [ivmap (build-interval-map data :x)]
-    {:ivmap  ivmap
+    {:full-data data
+     :ivmap  ivmap
      :max-xy (->> (vals ivmap)
                   (apply set/union)
                   (remove empty?)
@@ -192,25 +193,20 @@
     (<= (second (:y unit-square)) (second (:y rectangle)))))
 
 (defn unit-square-claims
-  [init x y-range]
-  (let [x-overlaps (->> (iget (:ivmap init) x)
-                        (sort-by :x))
-        unit-squares (map #(unit-square (vector x %)) y-range)]
+  [init x]
+  (let [max-y (second (:max-xy init))
+        y-range (range 0 (inc max-y))
+        unit-squares (map #(unit-square (vector x %)) y-range)
+        x-overlaps (->> (iget (:ivmap init) x)
+                        (sort-by :x))]
     (map #(hash-map :unit-square %
                     :claims (->> (filter (fn [r] (contained-by? % r)) x-overlaps)
-                                 (map :id))) unit-squares)))
+                                 (map :id)
+                                 set)) unit-squares)))
 
 (defn contested-unit-squares
-  [data]
-  (let [init (initial-state data)
-        max-x (first (:max-xy init))
-        max-y (second (:max-xy init))]
-    (->>
-      (for [x (range 0 (inc max-x))
-            :let [y-range (range 0 (inc max-y))]]
-        (unit-square-claims init x y-range))
-      (apply concat)
-      (filter #(>= (count (:claims %)) 2)))))
+  [squares]
+  (filter #(>= (count (:claims %)) 2) squares))
 
 
 
