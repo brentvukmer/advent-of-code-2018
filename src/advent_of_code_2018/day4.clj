@@ -85,9 +85,17 @@
        (map read-string)
        (apply (fn [year month day hour minute] (new GregorianCalendar year month day hour minute)))))
 
+(defn parse-guard-id
+  [s]
+  (remove empty? (re-seq #"(?:\#\d+)?" s)))
+
+(defn parse-wake-state
+  [s]
+  (remove empty? (re-seq #"(?:\w+\s\w+)?" r)))
+
+
 (defn parse-row
   [r]
-  ;
-  ; TODO: Figure out regex pattern for words separated by spaces
-  ;
+  (let [date-time (parse-julian-date-time r)
+        ])
   )
