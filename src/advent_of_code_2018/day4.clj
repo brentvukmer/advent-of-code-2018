@@ -1,4 +1,6 @@
 (ns advent-of-code-2018.day4
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str])
   (:import (java.util GregorianCalendar)))
 
 ;--- Day 4: Repose Record ---
@@ -80,22 +82,45 @@
 
 (defn parse-julian-date-time
   [s]
-  (->> (re-seq #"\[(\d+)\-(\d+)\-(\d+) (\d+)\:(\d+)\]" s)
-       (apply rest)
-       (map read-string)
-       (apply (fn [year month day hour minute] (new GregorianCalendar year month day hour minute)))))
+  (let [[f & r] (first (re-seq #"\[(\d+)\-(\d+)\-(\d+) (\d+)\:(\d+)\]" s))
+        jdt (->> r
+                 (map read-string)
+                 (apply (fn [year month day hour minute] (new GregorianCalendar year month day hour minute))))]
+    {:date-time jdt
+     :remaining (str/replace s f "")}))
 
 (defn parse-guard-id
   [s]
-  (remove empty? (re-seq #"(?:\#\d+)?" s)))
+  (let [match (->> (re-seq #"(?:\#\d+)?" s)
+                   (remove empty?)
+                   first)]
+    (if match
+      (-> (str/replace match "#" "")
+          read-string)
+      match)))
+
 
 (defn parse-wake-state
   [s]
-  (remove empty? (re-seq #"(?:\w+\s\w+)?" r)))
+  (let [match (->> (re-seq #"(?:\w+\s\w+)?" s)
+                   (remove empty?)
+                   first)]
+    (-> match
+        (str/replace " " "-")
+        keyword)))
 
-
-(defn parse-row
+(defn parse-input-row
   [r]
-  (let [date-time (parse-julian-date-time r)
-        ])
-  )
+  (let [{:keys [date-time remaining]} (parse-julian-date-time r)
+        guard-id (parse-guard-id remaining)]
+    (if guard-id
+      {:date-time date-time
+       :guard-id guard-id}
+      {:date-time date-time
+       :action (parse-wake-state remaining)})))
+
+(defn read-raw-data
+  [path]
+  (with-open [rdr (io/reader (io/resource path))]
+    (->> (map parse-input-row (line-seq rdr))
+         vec)))
