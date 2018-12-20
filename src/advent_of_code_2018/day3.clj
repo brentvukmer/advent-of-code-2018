@@ -65,8 +65,7 @@
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-    (->> (map parse-input-row (line-seq rdr))
-         vec)))
+     (mapv parse-input-row (line-seq rdr))))
 
 (defn convert-row
   "Takes the raw row data as input and returns the x and y for the corners."

@@ -76,10 +76,6 @@
 ;
 ;What is the ID of the guard you chose multiplied by the minute you chose? (In the above example, the answer would be 10 * 24 = 240.)
 
-;
-; Parse inputs
-;
-
 (defn parse-julian-date-time
   [s]
   (let [[f & r] (first (re-seq #"\[(\d+)\-(\d+)\-(\d+) (\d+)\:(\d+)\]" s))
@@ -99,7 +95,6 @@
           read-string)
       match)))
 
-
 (defn parse-wake-state
   [s]
   (let [match (->> (re-seq #"(?:\w+\s\w+)?" s)
@@ -115,12 +110,39 @@
         guard-id (parse-guard-id remaining)]
     (if guard-id
       {:date-time date-time
-       :guard-id guard-id}
+       :guard-id  guard-id}
       {:date-time date-time
-       :action (parse-wake-state remaining)})))
+       :action    (parse-wake-state remaining)})))
 
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-    (->> (map parse-input-row (line-seq rdr))
-         vec)))
+    (mapv parse-input-row (line-seq rdr))))
+
+;
+; Parse each input data row into a map.
+; Sort maps by :date-time.
+; Run reduce on the maps, building up a map of guard id
+; to a sorted map of days to sleep intervals.
+; Find the guard who slept the most minutes.
+; Build up a map of minute to count (i.e. "guard X was asleep 3 times at minute 12.")
+; Return guard id multiplied by the minute with the max count.
+;
+(defn guard-sleep-intervals
+  [data]
+  (reduce
+    (fn [accum x] (let [guard-id (:guard-id x)
+                        current-guard-id (:current-guard-id accum)]
+                    (if guard-id
+                      (assoc accum :current-guard-id guard-id
+                                   guard-id [])
+                      (update accum
+                              current-guard-id
+                              (fn [y] (conj (get accum current-guard-id) [:date-time (:date-time x) :action (:action x)]))))))
+    {}
+    data)
+  ;
+  ; TODO: Create sleep intervals and group by day
+  ;
+
+  )
