@@ -53,10 +53,6 @@
             (if (seq accum)
               (let [p [(last accum) c]
                     r (react-pair p)]
-                ;(println "accum: " accum)
-                ;(println "c: " c)
-                ;(println "p: " p)
-                ;(println "r: " r)
                 (if r
                   (conj accum c)
                   (vec (drop-last accum))))
