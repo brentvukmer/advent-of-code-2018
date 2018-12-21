@@ -1,4 +1,6 @@
-(ns advent-of-code-2018.day5)
+(ns advent-of-code-2018.day5
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 ;--- Day 5: Alchemical Reduction ---
 ;You've managed to sneak in to the prototype suit manufacturing lab.
@@ -26,3 +28,47 @@
 ;After all possible reactions, the resulting polymer contains 10 units.
 ;
 ;How many units remain after fully reacting the polymer you scanned?
+
+(defn react-pair
+  [[c1 c2]]
+  (let [pair [c1 c2]]
+    (if (and (> (count (set pair)) 1)
+             (= (count (set (map clojure.string/lower-case pair))) 1))
+      nil
+      pair)))
+
+;
+; Reduce function:
+;
+; Compare last-prev and first-next chars.
+; If they react:
+;    - Pop last from prev and first from next.
+; Pass updated prev/next to next reduce stage. ;
+;
+; Run reduce function until input = output.
+;
+(defn polymer-react
+  [s]
+  (reduce (fn [accum c]
+            (if (seq accum)
+              (let [p [(last accum) c]
+                    r (react-pair p)]
+                ;(println "accum: " accum)
+                ;(println "c: " c)
+                ;(println "p: " p)
+                ;(println "r: " r)
+                (if r
+                  (conj accum c)
+                  (vec (drop-last accum))))
+              [c]))
+          [(first s)]
+          (rest s)))
+
+(defn part1
+  [path]
+  (->> (io/resource path)
+       io/reader
+       slurp
+       str/trim
+       polymer-react
+       count))
