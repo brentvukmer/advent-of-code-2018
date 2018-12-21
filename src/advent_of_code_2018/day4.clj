@@ -1,7 +1,7 @@
 (ns advent-of-code-2018.day4
   (:require [clojure.java.io :as io]
             [clojure.string :as str])
-  (:import (java.util GregorianCalendar)))
+  (:import (java.util GregorianCalendar Calendar)))
 
 ;--- Day 4: Repose Record ---
 ;You've sneaked into another supply closet - this time, it's across from the prototype suit manufacturing lab.
@@ -80,7 +80,7 @@
   [s]
   (let [[f & r] (first (re-seq #"\[(\d+)\-(\d+)\-(\d+) (\d+)\:(\d+)\]" s))
         jdt (->> r
-                 (map read-string)
+                 (map #(Integer/valueOf %))
                  (apply (fn [year month day hour minute] (new GregorianCalendar year month day hour minute))))]
     {:date-time jdt
      :remaining (str/replace s f "")}))
@@ -117,7 +117,8 @@
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-    (mapv parse-input-row (line-seq rdr))))
+    (->> (map parse-input-row (line-seq rdr))
+         (sort-by :date-time))))
 
 ;
 ; Parse each input data row into a map.
@@ -130,19 +131,48 @@
 ;
 (defn guard-sleep-intervals
   [data]
-  (reduce
-    (fn [accum x] (let [guard-id (:guard-id x)
-                        current-guard-id (:current-guard-id accum)]
-                    (if guard-id
-                      (assoc accum :current-guard-id guard-id
-                                   guard-id [])
-                      (update accum
-                              current-guard-id
-                              (fn [y] (conj (get accum current-guard-id) [:date-time (:date-time x) :action (:action x)]))))))
-    {}
-    data)
-  ;
-  ; TODO: Create sleep intervals and group by day
-  ;
+  (->
+    (reduce
+      (fn [accum x] (let [guard-id (:guard-id x)
+                          current-guard-id (:current-guard-id accum)]
+                      (if guard-id
+                        (assoc accum :current-guard-id guard-id
+                                     guard-id (get accum guard-id []))
+                        (update accum
+                                current-guard-id
+                                (fn [y] (conj (get accum current-guard-id) [(:date-time x) (:action x)]))))))
+      {}
+      data)
+    (dissoc :current-guard-id)))
 
-  )
+(defn guard-sleep-minutes
+  [data]
+  (->> (for [[id intervals] (guard-sleep-intervals data)
+             :let [date-times
+                   (->> intervals
+                        flatten
+                        (remove keyword?))
+                   minute-ranges (->> (map #(.get % (Calendar/MINUTE)) date-times)
+                                      (partition 2)
+                                      (map #(apply range %)))]]
+         [id minute-ranges])
+       (into {})))
+
+(defn guard-sleep-max
+  [data]
+  (->> (for [[id minute-ranges] (guard-sleep-minutes data)
+             :let [sum (->> (map #(- (last %) (first %)) minute-ranges)
+                            (apply +))
+                   freqs (->> (apply concat minute-ranges)
+                              (group-by identity)
+                              (sort-by #(count (second %))))]]
+         {:id    id
+          :sum   sum
+          :freqs freqs})
+       (sort-by :sum)
+       last))
+
+(defn part1
+  [data]
+  (let [max (guard-sleep-max data)]
+    (* (:id max) (first (last (:freqs max))))))
