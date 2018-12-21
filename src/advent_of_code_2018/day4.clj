@@ -158,7 +158,7 @@
          [id minute-ranges])
        (into {})))
 
-(defn guard-sleep-max
+(defn guard-sleep-sum-freqs
   [data]
   (->> (for [[id minute-ranges] (guard-sleep-minutes data)
              :let [sum (->> (map #(- (last %) (first %)) minute-ranges)
@@ -168,11 +168,18 @@
                               (sort-by #(count (second %))))]]
          {:id    id
           :sum   sum
-          :freqs freqs})
-       (sort-by :sum)
-       last))
+          :freqs freqs})))
 
 (defn part1
   [data]
-  (let [max (guard-sleep-max data)]
+  (let [max (->> (guard-sleep-sum-freqs data)
+                 (sort-by :sum)
+                 last)]
     (* (:id max) (first (last (:freqs max))))))
+
+(defn part2
+  [data]
+  (->> (guard-sleep-sum-freqs data)
+       (sort-by #(second (last (:freqs %))))
+       last
+       (#(* (:id %) (first (last (:freqs %)))))))
