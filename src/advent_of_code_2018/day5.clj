@@ -56,7 +56,7 @@
             :pairs #{}}
            (rest s)))
   ([s]
-    (polymer-react s (possible-react-pairs))))
+   (polymer-react s (possible-react-pairs))))
 
 (defn part1
   [path]
@@ -93,13 +93,14 @@
   (let [input
         (->> (io/resource path)
              io/reader
-             slurp)]
-    ;
-    ; TODO: Try parallelizing this with pmap
-    ;
-    (for [p (possible-react-pairs)]
-      [p (-> (str/replace input (str (first p)) "")
-             (str/replace (str (second p)) "")
-             polymer-react
-             :prev
-             count)])))
+             slurp)
+        pairs (possible-react-pairs)]
+    (->> (pmap (fn [p] [p (-> (str/replace input (str (first p)) "")
+                              (str/replace (str (second p)) "")
+                              polymer-react
+                              :prev
+                              count)])
+               pairs)
+         (into {})
+         (sort-by second)
+         first)))
