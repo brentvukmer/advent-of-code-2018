@@ -30,41 +30,46 @@
 ;How many units remain after fully reacting the polymer you scanned?
 
 (defn react-pair
-  [[c1 c2]]
-  (let [pair [c1 c2]]
-    (if (and (> (count (set pair)) 1)
-             (= (count (set (map clojure.string/lower-case pair))) 1))
-      nil
-      pair)))
+  [pair ps]
+  (if (some #{pair} ps)
+    nil
+    pair))
 
-;
-; Reduce function:
-;
-; Compare last-prev and first-next chars.
-; If they react:
-;    - Pop last from prev and first from next.
-; Pass updated prev/next to next reduce stage. ;
-;
-; Run reduce function until input = output.
-;
+(defn possible-react-pairs
+  []
+  (->> (range (int \A) (inc (int \Z)))
+       (map #(set [(char %) ((comp first str/lower-case char) %)]))))
+
 (defn polymer-react
-  [s]
-  (reduce (fn [accum c]
-            (if (seq accum)
-              (let [p [(last accum) c]
-                    r (react-pair p)]
-                (if r
-                  (conj accum c)
-                  (vec (drop-last accum))))
-              [c]))
-          [(first s)]
-          (rest s)))
+  ([s ps]
+   (reduce (fn [accum c]
+             (let [{:keys [prev pairs]} accum]
+               (if (seq prev)
+                 (let [p (set [(last prev) c])
+                       r (react-pair p ps)]
+                   (if r
+                     (assoc accum :prev (conj prev c))
+                     (assoc accum :prev (vec (drop-last prev))
+                                  :pairs (conj pairs p))))
+                 (assoc accum :prev [c]))))
+           {:prev  [(first s)]
+            :pairs #{}}
+           (rest s)))
+  ([s]
+    (polymer-react s (possible-react-pairs))))
 
 (defn part1
   [path]
   (->> (io/resource path)
        io/reader
        slurp
-       str/trim
        polymer-react
+       :prev
        count))
+
+(defn part2
+  [path]
+  (->> (io/resource path)
+       io/reader
+       slurp
+       polymer-react))
