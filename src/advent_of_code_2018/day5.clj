@@ -94,7 +94,12 @@
         (->> (io/resource path)
              io/reader
              slurp)]
+    ;
+    ; TODO: Try parallelizing this with pmap
+    ;
     (for [p (possible-react-pairs)]
-      (->> (polymer-react input #{p})
-           :prev
-           polymer-react))))
+      [p (-> (str/replace input (str (first p)) "")
+             (str/replace (str (second p)) "")
+             polymer-react
+             :prev
+             count)])))
