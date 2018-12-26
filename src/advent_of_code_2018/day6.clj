@@ -1,18 +1,6 @@
-(ns advent-of-code-2018.day6)
+(ns advent-of-code-2018.day6
+  (:require [clojure.java.io :as io]))
 
-;--- Day 6: Chronal Coordinates ---
-;
-;The device on your wrist beeps several times, and once again you feel like you're falling.
-;
-;"Situation critical," the device announces. "Destination indeterminate."
-;"Chronal interference detected. Please specify new target coordinates."
-;
-;The device then produces a list of coordinates (your puzzle input).
-;Are they places it thinks are safe or dangerous? It recommends you check manual page 729.
-;The Elves did not give you a manual.
-;
-;If they're dangerous, maybe you can minimize the danger by finding the coordinate
-;that gives the largest distance from the other points.
 ;
 ;Using only the Manhattan distance, determine the area around each coordinate
 ;by counting the number of integer X,Y locations that are closest to that coordinate
@@ -40,8 +28,10 @@
 ;..........
 ;..........
 ;........F.
+;
 ;This view is partial - the actual grid extends infinitely in all directions.
-;Using the Manhattan distance, each location's closest coordinate can be determined, shown here in lowercase:
+;Using the Manhattan distance, each location's closest coordinate can be determined,
+;shown here in lowercase:
 ;
 ;aaaaa.cccc
 ;aAaaa.cccc
@@ -54,7 +44,8 @@
 ;bbb.eeffff
 ;bbb.ffffFf
 ;
-;Locations shown as . are equally far from two or more coordinates, and so they don't count as being closest to any.
+;Locations shown as . are equally far from two or more coordinates,
+;and so they don't count as being closest to any.
 ;
 ;In this example, the areas of coordinates A, B, C, and F are infinite -
 ;while not shown here, their areas extend forever outside the visible grid.
@@ -63,3 +54,30 @@
 ;Therefore, in this example, the size of the largest area is 17.
 ;
 ;What is the size of the largest area that isn't infinite?
+
+(defn read-raw-data
+  [path]
+  )
+
+(defn read-raw-data
+  [path]
+  (with-open [rdr (io/reader (io/resource path))]
+    (mapv #(read-string (str "[" % "]")) (line-seq rdr))))
+
+(defn manhattan-distance
+  ""
+  ([position]
+   (+ (Math/abs ^Integer (first position)) (Math/abs ^Integer (second position))))
+  ([pos2 pos1]
+   (manhattan-distance (map - pos2 pos1))))
+
+; Use a vector to represent the grid (2-D flattened into 1D).
+; Construct the grid starting at top-left as 0,0 (to max x + 1, max y).
+; Sort the designated locations (first by x, then y) and put into a vector.
+; At each designated location, put the id (index) for that location, at that location.
+; At each location in the grid that is NOT a designated location, start with the ids for all designated locations.
+;   - Find closest designated locations
+;   - If they are equidistant from the current location, put nil
+;   - If one is closer, put that one's id
+
+
