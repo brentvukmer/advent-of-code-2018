@@ -16,6 +16,7 @@
 ;3, 4
 ;5, 5
 ;8, 9
+;
 ;If we name these coordinates A through F, we can draw them on a grid, putting 0,0 at the top left:
 ;
 ;..........
@@ -80,4 +81,29 @@
 ;   - If they are equidistant from the current location, put nil
 ;   - If one is closer, put that one's id
 
+(defn neighbor-dist
+  [loc others]
+  (->> (map #(vector % (manhattan-distance loc %)) others)
+       (into {})))
 
+(defn fill-grid
+  [data]
+  (let [sorted (vec (sort-by (juxt first second) data))
+        size (inc (max (apply max (map first data))
+                       (apply max (map second data))))]
+    (for [x (range 0 (inc size))
+          y (range 0 (inc size))
+          :let [loc [x y]
+                closest-dists (->> (neighbor-dist loc sorted)
+                                   (sort-by second)
+                                   (take 2))
+                closest (if (= (second (first closest-dists))
+                               (second (second closest-dists)))
+                          nil
+                          (first closest-dists))]]
+      [loc closest])))
+
+(defn grid-areas
+  [data]
+  (->> (fill-grid data)
+       (group-by #(first (second %)))))

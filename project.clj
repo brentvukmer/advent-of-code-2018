@@ -3,5 +3,5 @@
   :url "https://github.com/brentvukmer/advent-of-code-2018"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [quil "2.5.0"]])
