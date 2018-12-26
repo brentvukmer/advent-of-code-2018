@@ -7,7 +7,7 @@
     (vec (line-seq rdr))))
 
 ;
-; Part 1
+; PART 1
 ;
 
 (defn checksum
@@ -21,7 +21,7 @@
     (* twos threes)))
 
 ;
-; Part 2
+; PART 2
 ;
 ; The boxes will have IDs which differ by exactly one character at the same position in both strings. For example, given the following box IDs:
 ;
