@@ -67,7 +67,7 @@
 (defn read-raw-data
   [path]
   (with-open [rdr (io/reader (io/resource path))]
-     (mapv parse-input-row (line-seq rdr))))
+    (mapv parse-input-row (line-seq rdr))))
 
 (defn links
   [data]
@@ -80,3 +80,17 @@
   (->> (set (apply concat (vals ls)))
        (set/difference (set (keys ls)))
        first))
+
+(defn print-steps
+  [data]
+  (let [ls (links data)
+        tree (->> ls
+                  find-start
+                  (tree-seq keyword? #(% ls)))
+        steps-minus (->> tree
+                         (remove #(= (last tree) %))
+                         vec)
+        steps (conj steps-minus (last tree))]
+    (->> steps
+         (map name)
+         (apply str))))
