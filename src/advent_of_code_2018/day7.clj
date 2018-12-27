@@ -1,6 +1,7 @@
 (ns advent-of-code-2018.day7
   (:require [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.set :as set])
   (:import (java.util GregorianCalendar)))
 
 ;--- Day 7: The Sum of Its Parts ---
@@ -67,3 +68,15 @@
   [path]
   (with-open [rdr (io/reader (io/resource path))]
      (mapv parse-input-row (line-seq rdr))))
+
+(defn links
+  [data]
+  (->> (group-by first data)
+       (map #(vector (first %) (sort (map second (second %)))))
+       (into {})))
+
+(defn find-start
+  [ls]
+  (->> (set (apply concat (vals ls)))
+       (set/difference (set (keys ls)))
+       first))
