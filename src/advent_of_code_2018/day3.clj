@@ -3,8 +3,7 @@
 ;
 (ns advent-of-code-2018.day3
   (:require [clojure.java.io :as io]
-            [clojure.set :as set]
-            [quil.core :as q]))
+            [clojure.set :as set]))
 
 ;
 ; PART 1
