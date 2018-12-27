@@ -87,12 +87,10 @@
        (into {})))
 
 (defn fill-grid
-  [data]
-  (let [sorted (vec (sort-by (juxt first second) data))
-        size (inc (max (apply max (map first data))
-                       (apply max (map second data))))]
-    (for [x (range 0 (inc size))
-          y (range 0 (inc size))
+  [data size]
+  (let [sorted (vec (sort-by (juxt first second) data))]
+    (for [x (range 0 size)
+          y (range 0 size)
           :let [loc [x y]
                 closest-dists (->> (neighbor-dist loc sorted)
                                    (sort-by second)
@@ -101,9 +99,33 @@
                                (second (second closest-dists)))
                           nil
                           (first closest-dists))]]
-      [loc closest])))
+      [loc (first closest)])))
 
-(defn grid-areas
+(defn infinite-area?
+  [size area]
+  (let [xs (->> (second area)
+                (map first)
+                set)
+        ys (->> (second area)
+                (map second)
+                set)]
+    (or (some #{0 (dec size)} xs)
+        (some #{0 (dec size)} ys))))
+
+(defn grid-finite-areas
   [data]
-  (->> (fill-grid data)
-       (group-by #(first (second %)))))
+  (let [size (inc (max (apply max (map first data))
+                       (apply max (map second data))))]
+    (->> (fill-grid data size)
+         (group-by #(second %))
+         (map #(vector (first %) (mapv first (second %))))
+         (remove #(infinite-area? size %)))))
+
+(defn grid-max-finite-area
+  [data]
+  (->> (grid-finite-areas data)
+       (map #(vector (first %) (count (second %))))
+       (sort-by second)
+       last))
+
+
