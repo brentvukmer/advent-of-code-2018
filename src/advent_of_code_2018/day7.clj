@@ -85,35 +85,35 @@
   (println "evaluation-set: " evaluation-set)
   (println "forward-links: " forward-links)
   (println "back-links: " back-links)
-  (let [next-step (->> (filter #(let [requirements (set (get back-links %))]
-                                  (or (nil? requirements)
-                                      (= requirements
-                                         (set/intersection requirements (set accumulator))))) evaluation-set)
-                       sort
-                       first)]
-    (println "next-step: " next-step)
-    (if next-step
-      (collect-steps (conj accumulator next-step)
-                     (set/union (disj evaluation-set next-step)
-                                (apply sorted-set (get forward-links next-step)))
-                     forward-links
-                     back-links)
-      accumulator)))
+  (if (empty? evaluation-set)
+    accumulator
+    (let [next-step (->> (filter #(let [requirements (set (% back-links))]
+                                    (or (nil? requirements)
+                                        (= requirements
+                                           (set/intersection requirements (set accumulator))))) evaluation-set)
+                         sort
+                         first)]
+      (println "next-step: " next-step)
+      (if next-step
+        (collect-steps (conj accumulator next-step)
+                       (set/union (disj evaluation-set next-step)
+                                  (apply sorted-set (next-step forward-links)))
+                       forward-links
+                       back-links)
+        (collect-steps accumulator
+                       (set/union evaluation-set
+                                  (->> (map #(% forward-links) evaluation-set)
+                                       (apply concat)
+                                       (apply sorted-set)))
+                       forward-links
+                       back-links)))))
 
 (defn print-steps
   [data]
   (let [back-links (links data second first)
         forward-links (links data first second)
         start (first (set/difference (set (keys forward-links)) (set (keys back-links))))]
-    ; Create a vector to accumulate steps
-    ; Get current step (first in alphabetical order from evaluation set)
-    ; If the current step is satisfied:
-    ;  - conj it into accumulator
-    ;  - add current step's forward links to the evaluation set
-    ; Otherwise:
-    ;  - add current step to the evaluation set
-    ;  - add current step's forward links to the evaluation set
-    (->> (collect-steps [] #{start} forward-links back-links)
+    (->> (collect-steps [] (sorted-set start) forward-links back-links)
          (map name)
          (apply str))))
 
