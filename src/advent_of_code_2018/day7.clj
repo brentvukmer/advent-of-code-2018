@@ -48,8 +48,10 @@
 ;
 ;Only C is available, and so it is done first.
 ;Next, both A and F are available. A is first alphabetically, so it is done next.
-;Then, even though F was available earlier, steps B and D are now also available, and B is the first alphabetically of the three.
-;After that, only D and F are available. E is not available because only some of its prerequisites are complete. Therefore, D is completed next.
+;Then, even though F was available earlier, steps B and D are now also available,
+;and B is the first alphabetically of the three.
+;After that, only D and F are available. E is not available because only some
+;of its prerequisites are complete. Therefore, D is completed next.
 ;F is the only choice, so it is done next.
 ;Finally, E is completed.
 ;
@@ -70,27 +72,48 @@
     (mapv parse-input-row (line-seq rdr))))
 
 (defn links
-  [data]
-  (->> (group-by first data)
-       (map #(vector (first %) (sort (map second (second %)))))
+  [data from-fn to-fn]
+  (->> data
+       (map #(list (from-fn %) (to-fn %)))
+       (group-by first)
+       (map #(vector (first %) (map second (second %))))
        (into {})))
 
-(defn find-start
-  [ls]
-  (->> (set (apply concat (vals ls)))
-       (set/difference (set (keys ls)))
-       first))
+(defn collect-steps
+  [accumulator evaluation-set forward-links back-links]
+  (println "accumulator: " accumulator)
+  (println "evaluation-set: " evaluation-set)
+  (println "forward-links: " forward-links)
+  (println "back-links: " back-links)
+  (let [next-step (->> (filter #(let [requirements (set (get back-links %))]
+                                  (or (nil? requirements)
+                                      (= requirements
+                                         (set/intersection requirements (set accumulator))))) evaluation-set)
+                       sort
+                       first)]
+    (println "next-step: " next-step)
+    (if next-step
+      (collect-steps (conj accumulator next-step)
+                     (set/union (disj evaluation-set next-step)
+                                (apply sorted-set (get forward-links next-step)))
+                     forward-links
+                     back-links)
+      accumulator)))
 
 (defn print-steps
   [data]
-  (let [ls (links data)
-        tree (->> ls
-                  find-start
-                  (tree-seq keyword? #(% ls)))
-        steps-minus (->> tree
-                         (remove #(= (last tree) %))
-                         vec)
-        steps (conj steps-minus (last tree))]
-    (->> steps
+  (let [back-links (links data second first)
+        forward-links (links data first second)
+        start (first (set/difference (set (keys forward-links)) (set (keys back-links))))]
+    ; Create a vector to accumulate steps
+    ; Get current step (first in alphabetical order from evaluation set)
+    ; If the current step is satisfied:
+    ;  - conj it into accumulator
+    ;  - add current step's forward links to the evaluation set
+    ; Otherwise:
+    ;  - add current step to the evaluation set
+    ;  - add current step's forward links to the evaluation set
+    (->> (collect-steps [] #{start} forward-links back-links)
          (map name)
          (apply str))))
+
