@@ -81,10 +81,6 @@
 
 (defn collect-steps
   [accumulator evaluation-set forward-links back-links]
-  (println "accumulator: " accumulator)
-  (println "evaluation-set: " evaluation-set)
-  (println "forward-links: " forward-links)
-  (println "back-links: " back-links)
   (if (empty? evaluation-set)
     accumulator
     (let [next-step (->> (filter #(let [requirements (set (% back-links))]
@@ -93,7 +89,6 @@
                                            (set/intersection requirements (set accumulator))))) evaluation-set)
                          sort
                          first)]
-      (println "next-step: " next-step)
       (if next-step
         (collect-steps (conj accumulator next-step)
                        (set/union (disj evaluation-set next-step)
