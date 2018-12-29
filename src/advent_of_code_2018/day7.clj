@@ -1,25 +1,8 @@
 (ns advent-of-code-2018.day7
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clojure.set :as set])
-  (:import (java.util GregorianCalendar)))
+            [clojure.set :as set]))
 
-;--- Day 7: The Sum of Its Parts ---
-;You find yourself standing on a snow-covered coastline; apparently, you landed a little off course.
-;The region is too hilly to see the North Pole from here, but you do spot some Elves that seem to be
-;trying to unpack something that washed ashore. It's quite cold out, so you decide to risk creating
-; a paradox by asking them for directions.
-;
-;"Oh, are you the search party?" Somehow, you can understand whatever Elves from the year 1018 speak;
-;you assume it's Ancient Nordic Elvish. Could the device on your wrist also be a translator?
-;"Those clothes don't look very warm; take this." They hand you a heavy coat.
-;
-;"We do need to find our way back to the North Pole, but we have higher priorities at the moment.
-;You see, believe it or not, this box contains something that will solve all of Santa's transportation problems -
-;at least, that's what it looks like from the pictures in the instructions." It doesn't seem like they can read
-;whatever language it's in, but you can: "Sleigh kit. Some assembly required."
-;
-;"'Sleigh'? What a wonderful name! You must help us assemble this 'sleigh' at once!" They start excitedly pulling more parts out of the box.
+;PART 1
 ;
 ;The instructions specify a series of steps and requirements about which steps must be finished before others can begin (your puzzle input).
 ;Each step is designated by a single letter. For example, suppose you have the following instructions:
@@ -106,7 +89,8 @@
          (map name)
          (apply str))))
 
-;--- Part Two ---
+;PART 2
+;
 ;As you're about to begin construction, four of the Elves offer to help.
 ;"The sun will set soon; it'll go faster if we work together."
 ;
@@ -119,9 +103,9 @@
 ;
 ;To simplify things for the example, however, suppose you only have help from one Elf
 ;(a total of two workers) and that each step takes 60 fewer seconds
-; (so that step A takes 1 second and step Z takes 26 seconds).
+;(so that step A takes 1 second and step Z takes 26 seconds).
 ;
-; Then, using the same instructions as above, this is how each second would be spent:
+;Then, using the same instructions as above, this is how each second would be spent:
 ;
 ;Second   Worker 1   Worker 2   Done
 ;0        C          .
@@ -142,8 +126,8 @@
 ;15        .          .       CABFDE
 ;
 ;Each row represents one second of time. The Second column identifies how many seconds
-; have passed as of the beginning of that second. Each worker column shows the step that
-; worker is currently doing (or . if they are idle). The Done column shows completed steps.
+;have passed as of the beginning of that second. Each worker column shows the step that
+;worker is currently doing (or . if they are idle). The Done column shows completed steps.
 ;
 ;Note that the order of the steps has changed; this is because steps now take time to finish
 ;and multiple workers can begin multiple steps simultaneously.
@@ -153,3 +137,33 @@
 ;With 5 workers and the 60+ second step durations described above, how long will it take
 ;to complete all of the steps?
 
+(defn step-time
+  ([s t]
+   (+ t
+      (- (int (first (name s))) (dec (int \A)))))
+  ([s]
+   (step-time s 60)))
+
+(defn p-collect-steps
+  [{:keys [accumulator workers evaluation-set forward-links back-links time-offset]} state]
+  (if (empty? evaluation-set)
+    accumulator
+    (let [next-steps (->> (filter #(let [requirements (set (% back-links))]
+                                    (or (nil? requirements)
+                                        (= requirements
+                                           (set/intersection requirements (set accumulator))))) evaluation-set)
+                         sort)]
+      (if (seq next-steps)
+        ; Do a reduce on next-steps, updating the workers' state:
+        ; - If a worker is available and a step is available, conj the step onto the worker's queue.
+        ; - If a worker is occupied, compare the total time needed for the time already spent for the step
+        ; (time already spent = count all occurrences of the step in the worker's queue).
+        ; - If the task is completed, conj onto the accumulator and look for an available step;
+        ; otherwise conj the step onto the worker's queue.
+        ;
+        (collect-steps (conj accumulator next-steps)
+                       (set/union (disj evaluation-set next-steps)
+                                  (apply sorted-set (next-steps forward-links)))
+                       forward-links
+                       back-links)
+        accumulator))))
