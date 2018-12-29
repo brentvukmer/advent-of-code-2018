@@ -145,14 +145,17 @@
    (step-time s 60)))
 
 (defn p-collect-steps
-  [{:keys [accumulator workers evaluation-set forward-links back-links time-offset]} state]
+  ;
+  ; 'workers' is a map of worker number to worker queue
+  ;
+  [{:keys [accumulator workers evaluation-set forward-links back-links time-offset]}]
   (if (empty? evaluation-set)
     accumulator
     (let [next-steps (->> (filter #(let [requirements (set (% back-links))]
-                                    (or (nil? requirements)
-                                        (= requirements
-                                           (set/intersection requirements (set accumulator))))) evaluation-set)
-                         sort)]
+                                     (or (nil? requirements)
+                                         (= requirements
+                                            (set/intersection requirements (set accumulator))))) evaluation-set)
+                          sort)]
       (if (seq next-steps)
         ; Do a reduce on next-steps, updating the workers' state:
         ; - If a worker is available and a step is available, conj the step onto the worker's queue.
@@ -161,9 +164,32 @@
         ; - If the task is completed, conj onto the accumulator and look for an available step;
         ; otherwise conj the step onto the worker's queue.
         ;
-        (collect-steps (conj accumulator next-steps)
-                       (set/union (disj evaluation-set next-steps)
-                                  (apply sorted-set (next-steps forward-links)))
-                       forward-links
-                       back-links)
+        (let [available-workers (sorted-map (filter #(or (idle? %) (done? %)) workers))
+              ; Update busy workers with step they're already working on.
+              busy-workers (->> (apply dissoc workers (keys available-workers))
+                                (map #(vector (first %) (conj (second %) (last (second %)))))
+                                sorted-map)
+              new-steps (take (count available-workers) next-steps)
+              ; Update assigned workers with new steps.
+              assigned-workers (->> (sorted-map (take (count new-steps) available-workers))
+                                    (map vector new-steps)
+                                    (map #(vector (first (second %)) (conj (second (second %)) (first %))))
+                                    (into {}))
+              ; Update unused workers with nil at the end of the queue.
+              unused-workers (->> (into {} (take-last (count new-steps) available-workers))
+                                  (map #(vector (first %) (conj (second %) nil)))
+                                  (into {}))
+              steps-completed (->> (filter done? workers)
+                                   (map second)
+                                   (map last)
+                                   (apply sorted-set))]
+          (p-collect-steps {:accumulator   (apply conj accumulator steps-completed)
+                            :workers       (conj busy-workers assigned-workers unused-workers)
+                            :evaluation-set
+                                           (set/union (apply disj evaluation-set steps-completed)
+                                                      (apply sorted-set (concat (map new-steps forward-links))))
+                            :forward-links forward-links
+                            :back-links    back-links
+                            :time-offset   time-offset}))
         accumulator))))
+
