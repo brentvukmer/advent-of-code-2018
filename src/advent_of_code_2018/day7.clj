@@ -168,7 +168,6 @@
                                        (= requirements
                                           (set/intersection requirements (set updated-accumulator))))) updated-eval-set)
                         sort)]
-    (println "next-steps: " next-steps)
     (if (seq next-steps)
       (let [available-workers (into (sorted-map) (concat done-workers (filter idle? workers)))
             ; Update busy workers with the step that they're already working on.
@@ -205,12 +204,14 @@
   (let [back-links (links data second first)
         forward-links (links data first second)
         start-set (apply sorted-set (set/difference (set (keys forward-links)) (set (keys back-links))))]
-    (take-while #(seq (:evaluation-set %)) (iterate process-one-sec {:accumulator    []
-                                                                     :workers        (->> (take num-workers (repeat []))
-                                                                                          (map vector (range 1 (inc num-workers)))
-                                                                                          (into {}))
-                                                                     :evaluation-set start-set
-                                                                     :forward-links  forward-links
-                                                                     :back-links     back-links
-                                                                     :time-offset    time-offset}))))
+    ;(take-while #(seq (:evaluation-set %))
+    ;            )
+    (take 9 (iterate process-one-sec {:accumulator    []
+                                      :workers        (->> (take num-workers (repeat []))
+                                                           (map vector (range 1 (inc num-workers)))
+                                                           (into {}))
+                                      :evaluation-set start-set
+                                      :forward-links  forward-links
+                                      :back-links     back-links
+                                      :time-offset    time-offset}))))
 
