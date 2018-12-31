@@ -58,10 +58,6 @@
 
 (defn read-raw-data
   [path]
-  )
-
-(defn read-raw-data
-  [path]
   (with-open [rdr (io/reader (io/resource path))]
     (mapv #(read-string (str "[" % "]")) (line-seq rdr))))
 

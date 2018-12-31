@@ -58,6 +58,9 @@
 (defn draw-claims-with-line
   [state]
   ; Don't keep sweeping once we've gone across the canvas once
+  (if (= 1 (:num-sweeps state))
+    ; Delay so that we can record for screencast
+    (q/delay-frame 10000))
   (if (<= (:num-sweeps state) (first (:size state)))
     (let [x (:x-val state)
           claims (day3/iget (:ivmap state) x)
@@ -98,7 +101,7 @@
                :setup (fn [] (setup {:target-frame-rate 60
                                      :data-path         "day3"
                                      :size              prod-size}))
-               :features [:resizable :keep-on-top]
+               :features [:resizable]
                :middleware [m/fun-mode]
                :mouse-dragged mouse-dragged
                :mouse-clicked mouse-clicked)
