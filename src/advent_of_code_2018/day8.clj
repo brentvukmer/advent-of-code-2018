@@ -1,4 +1,6 @@
-(ns advent-of-code-2018.day8)
+(ns advent-of-code-2018.day8
+  (:require [clojure.java.io :as io]
+            [clojure.core.specs.alpha]))
 
 ;PART 1
 ;
@@ -40,3 +42,52 @@
 ;In this example, that sum is 1+1+2+10+11+12+2+99=138.
 ;
 ;What is the sum of all metadata entries?
+
+(defn read-raw-data
+  [path]
+  (read-string (str "[" (slurp (io/resource path)) "]")))
+
+(defn header
+  [input]
+  {:num-children         (first input)
+   :num-metadata-entries (second input)})
+
+; Stub declared in advance since 'node' and 'children' call each other
+(defn node [input]
+  {})
+
+(defn node-size
+  [node]
+  (+ (count (:header node))
+     (apply + (map node-size (:children node)))
+     (count (:metadata-entries node))))
+
+(defn children
+  [n input]
+  (->> (iterate #(let [current-input (:input %)
+                       node (node current-input)]
+                   {:input (drop (node-size node) current-input)
+                    :nodes (conj (:nodes %) node)})
+                {:input input :nodes []})
+       (take (inc n))
+       rest
+       last
+       :nodes
+       ))
+
+(defn node
+  [input]
+  (let [header (header input)
+        children (children (:num-children header) (drop 2 input))]
+    {:header           header
+     :children         children
+     :metadata-entries (vec (take (:num-metadata-entries header) (drop (->> (map node-size children)
+                                                                            (apply +)
+                                                                            (+ 2)) input)))}))
+
+(defn metadata
+  [node]
+  (->> (map metadata (:children node))
+       (apply concat)
+       (cons (:metadata-entries node))
+       flatten))
