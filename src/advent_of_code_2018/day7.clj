@@ -195,16 +195,6 @@
         updated-workers (if (seq next-steps)
                           (conj busy-workers assigned-workers unused-workers)
                           (conj busy-workers unused-workers))]
-    ;(println "done-workers: " done-workers)
-    ;(println "available-workers: " available-workers)
-    ;(println "busy-workers: " busy-workers)
-    ;(println "completed-steps: " completed-steps)
-    ;(println "updated-accumulator: " updated-accumulator)
-    ;(println "updated-eval-set: " updated-eval-set)
-    ;(println "next-steps: " next-steps)
-    ;(println "new-steps: " new-steps)
-    ;(println "assigned-workers: " assigned-workers)
-    ;(println "unused-workers: " unused-workers)
     {:accumulator    updated-accumulator
      :workers        updated-workers
      :evaluation-set updated-eval-set
@@ -232,5 +222,5 @@
           count
           ((comp dec dec)))))
   ([]
-    (part2 (read-raw-data "day7") 5 60)))
+   (part2 (read-raw-data "day7") 5 60)))
 
