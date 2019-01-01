@@ -54,7 +54,10 @@
 ;[6]  0 16  8 17  4 18 19  2(24)20 10 21  5 22 11  1 12  6 13  3 14  7 15
 ;[7]  0 16  8 17  4 18 19  2 24 20(25)10 21  5 22 11  1 12  6 13  3 14  7 15
 ;
-;The goal is to be the player with the highest score after the last marble is used up. Assuming the example above ends after the marble numbered 25, the winning score is 23+9=32 (because player 5 kept marble 23 and removed marble 9, while no other player got any points in this very short example game).
+;The goal is to be the player with the highest score after the last marble is used up.
+;Assuming the example above ends after the marble numbered 25, the winning score is 23+9=32
+;(because player 5 kept marble 23 and removed marble 9, while no other player got any points
+;in this very short example game).
 ;
 ;Here are a few more examples:
 ;
