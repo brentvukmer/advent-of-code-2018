@@ -1,4 +1,5 @@
-(ns advent-of-code-2018.day9)
+(ns advent-of-code-2018.day9
+  (:require [clojure.set :as set]))
 
 ;PART 1
 ;
@@ -76,19 +77,6 @@
 ;
 ;What is the winning Elf's score?
 
-; NOTES:
-;
-; Data:
-;
-; List of remaining marbles.
-; Map of player id to vector of marbles acquired.
-; Cycle through player ids.
-;
-
-(defn clockwise-index
-  [v i]
-  (mod (inc i) (count v)))
-
 (defn counter-clockwise-index
   [v i d]
   (mod (- i d) (count v)))
@@ -99,27 +87,42 @@
        first))
 
 (defn insert-m
+  [v m i]
+  (if (<= (count v) 1)
+    (conj v m)
+    (->> (concat (take i v) (cons m (drop i v)))
+         vec)))
+
+(defn remove-ccw-m
   [v m]
-  (let [i (index-of-m v m)]
-    (concat (take i v) (cons m (drop i v)))))
+  (let [current-index (index-of-m v m)
+        i (counter-clockwise-index v current-index 7)]
+    (->> (take (dec i) v)
+         (concat (drop (inc i) v)))))
 
 (defn play-circle
-  [{:keys [circle current-marble marbles player-marbles players]}]
+  [{:keys [circle current-marble marbles player-marbles player num-players]}]
   (let [next-marble (first marbles)
-        current-index (index-of-m circle current-marble)
-        take-marbles? (= 0 (mod next-marble 23))
-        updated-circle (if take-marbles?
-                         ; TODO: Remove marble counter-clockwise 7 steps away from current marble.
-                         (insert-m circle next-marble))
-        updated-players (if take-marbles?
-                          ; TODO: Update current player with next-marble and removed marble.
-                          players)
-        updated-marble (if take-marbles?
-                         ; TODO: Get marble clockwise of removed marble.
-                         next-marble)
+        take-marbles? (and (pos-int? next-marble)
+                           (= 0 (mod next-marble 23)))
+        updates (if take-marbles?
+                  (let [updated-circle (remove-ccw-m circle current-marble)
+                        removed-marble (->> (set/difference (set circle) (set updated-circle))
+                                            first)]
+                    {:circle         updated-circle
+                     :player-marbles (->> removed-marble
+                                          (conj (get player-marbles player []) next-marble)
+                                          (assoc player-marbles player))
+                     :current-marble (->> (inc (index-of-m circle removed-marble))
+                                          (get circle))})
+                  {:circle         (->> (index-of-m circle current-marble)
+                                        (insert-m circle next-marble))
+                   :player-marbles player-marbles
+                   :current-marble next-marble})
         ]
-    {:circle updated-circle
-     :current-marble (first marbles)
-     :marbles marbles
-     :player-marbles player-marbles
-     :players players}))
+    {:circle         (:circle updates)
+     :current-marble (:current-marble updates)
+     :marbles        (rest marbles)
+     :player-marbles (:player-marbles updates)
+     :player         (mod (inc player) num-players)
+     :num-players num-players}))
