@@ -1,5 +1,6 @@
 (ns advent-of-code-2018.day9
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [clojure.java.io :as io]))
 
 ;PART 1
 ;
@@ -77,6 +78,24 @@
 ;
 ;What is the winning Elf's score?
 
+(defn read-data
+  [path]
+  (let [rows
+        (with-open [rdr (io/reader (io/resource path))]
+          (->> (map #(->> (re-seq #"(\d+) players; last marble is worth (\d+) points" %)
+                          first
+                          rest
+                          (mapv read-string))
+                    (line-seq rdr))
+               vec))]
+    (mapv #(hash-map :num-players (first %)
+                     :num-marbles (inc (second %)))
+          rows)))
+
+(defn next-clockwise-index
+  [v i]
+  (mod (inc i) (count v)))
+
 (defn counter-clockwise-index
   [v i d]
   (mod (- i d) (count v)))
@@ -88,21 +107,24 @@
 
 (defn insert-m
   [v m i]
-  (if (<= (count v) 1)
-    (conj v m)
-    (->> (concat (take i v) (cons m (drop i v)))
-         vec)))
+  (->> (concat (take (inc i) v) (cons m (drop (inc i) v)))
+       vec))
 
 (defn remove-ccw-m
   [v m]
-  (let [current-index (index-of-m v m)
-        i (counter-clockwise-index v current-index 7)]
-    (->> (take (dec i) v)
-         (concat (drop (inc i) v)))))
+  (let [current-index (index-of-m v m)]
+    (if current-index
+      (let [i (counter-clockwise-index v current-index 7)]
+        (->> (concat (take i v) (drop (inc i) v))
+             vec))
+      v)))
 
 (defn play-circle
-  [{:keys [circle current-marble marbles player-marbles player num-players]}]
-  (let [next-marble (first marbles)
+  [{:keys [circle current-marble marbles player-marbles player num-players num-marbles]}]
+  (let [current-player (if player
+                         (mod (inc player) num-players)
+                         1)
+        next-marble (first marbles)
         take-marbles? (and (pos-int? next-marble)
                            (= 0 (mod next-marble 23)))
         updates (if take-marbles?
@@ -111,18 +133,53 @@
                                             first)]
                     {:circle         updated-circle
                      :player-marbles (->> removed-marble
-                                          (conj (get player-marbles player []) next-marble)
-                                          (assoc player-marbles player))
-                     :current-marble (->> (inc (index-of-m circle removed-marble))
+                                          (conj (get player-marbles current-player []) next-marble)
+                                          (assoc player-marbles current-player))
+                     :current-marble (->> (next-clockwise-index circle (index-of-m circle removed-marble))
                                           (get circle))})
                   {:circle         (->> (index-of-m circle current-marble)
+                                        (next-clockwise-index circle)
                                         (insert-m circle next-marble))
                    :player-marbles player-marbles
-                   :current-marble next-marble})
-        ]
+                   :current-marble next-marble})]
     {:circle         (:circle updates)
      :current-marble (:current-marble updates)
      :marbles        (rest marbles)
      :player-marbles (:player-marbles updates)
-     :player         (mod (inc player) num-players)
-     :num-players num-players}))
+     :player         current-player
+     :num-players    num-players
+     :num-marbles    num-marbles}))
+
+(defn game-scores
+  [{:keys [player-marbles]}]
+  (->> (vals player-marbles)
+       (map #(apply + %))
+       sort))
+
+(defn initial-state
+  [{:keys [num-players num-marbles]}]
+  {:circle         [0],
+   :current-marble 0,
+   :marbles        (range 1 num-marbles),
+   :player-marbles {},
+   :player         nil,
+   :num-players    num-players
+   :num-marbles    num-marbles})
+
+(defn data-at
+  [path r]
+  (-> (read-data path)
+       (get r)
+       initial-state))
+
+(defn part1
+  ([path r]
+   (let [state-zero (data-at path r)]
+     (->> state-zero
+          (iterate play-circle)
+          (take (:num-marbles state-zero))
+          last
+          game-scores
+          last)))
+  ([path]
+    (part1 path 0)))
