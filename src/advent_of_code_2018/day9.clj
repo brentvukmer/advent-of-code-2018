@@ -1,6 +1,10 @@
 (ns advent-of-code-2018.day9
   (:require [clojure.set :as set]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io])
+  (:import (java.util Vector ArrayList HashMap)
+           (clojure.lang PersistentVector)))
+
+(set! *warn-on-reflection* true)
 
 ;PART 1
 ;
@@ -100,10 +104,9 @@
   [v i d]
   (mod (- i d) (count v)))
 
-(defn index-of-m
-  [v m]
-  (->> (keep-indexed #(if (= m %2) %1) v)
-       first))
+(defn index-of
+  [^PersistentVector v ^Integer m]
+  (.indexOf v m))
 
 (defn insert-m
   [v m i]
@@ -112,12 +115,17 @@
 
 (defn remove-ccw-m
   [v m]
-  (let [current-index (index-of-m v m)]
+  (let [current-index (index-of v m)]
     (if current-index
       (let [i (counter-clockwise-index v current-index 7)]
         (->> (concat (take i v) (drop (inc i) v))
              vec))
       v)))
+
+(defn take-marbles?
+  [m]
+  (and (pos-int? m)
+       (= 0 (mod m 23))))
 
 (defn play-circle
   [{:keys [circle current-marble marbles player-marbles player num-players num-marbles]}]
@@ -125,9 +133,7 @@
                          (mod (inc player) num-players)
                          1)
         next-marble (first marbles)
-        take-marbles? (and (pos-int? next-marble)
-                           (= 0 (mod next-marble 23)))
-        updates (if take-marbles?
+        updates (if (take-marbles? next-marble)
                   (let [updated-circle (remove-ccw-m circle current-marble)
                         removed-marble (->> (set/difference (set circle) (set updated-circle))
                                             first)]
@@ -135,9 +141,9 @@
                      :player-marbles (->> removed-marble
                                           (conj (get player-marbles current-player []) next-marble)
                                           (assoc player-marbles current-player))
-                     :current-marble (->> (next-clockwise-index circle (index-of-m circle removed-marble))
+                     :current-marble (->> (next-clockwise-index circle (index-of circle removed-marble))
                                           (get circle))})
-                  {:circle         (->> (index-of-m circle current-marble)
+                  {:circle         (->> (index-of circle current-marble)
                                         (next-clockwise-index circle)
                                         (insert-m circle next-marble))
                    :player-marbles player-marbles
@@ -151,7 +157,7 @@
      :num-marbles    num-marbles}))
 
 (defn game-scores
-  [{:keys [player-marbles]}]
+  [player-marbles]
   (->> (vals player-marbles)
        (map #(apply + %))
        sort))
@@ -169,8 +175,8 @@
 (defn data-at
   [path r]
   (-> (read-data path)
-       (get r)
-       initial-state))
+      (get r)
+      initial-state))
 
 (defn part1
   ([path r]
@@ -179,7 +185,44 @@
           (iterate play-circle)
           (take (:num-marbles state-zero))
           last
+          :player-marbles
           game-scores
           last)))
   ([path]
-    (part1 path 0)))
+   (part1 path 0)))
+
+(defn quicker-play-circle
+  [num-players num-marbles]
+  (let [^ArrayList circle (new ArrayList num-marbles)
+        ^HashMap player-marbles (new HashMap num-players)
+        memo (atom {:current-marble 0})]
+    (doseq [p (range 0 num-players)]
+      (doto player-marbles (.put p [])))
+    (doto circle (.add 0))
+    (doseq [m (range 1 num-marbles)]
+      (println "quicker-play-circle | circle: " circle)
+      (println "quicker-play-circle | m: " m)
+      (if (take-marbles? m)
+        (let [remove-index (counter-clockwise-index circle (.indexOf circle (:current-marble @memo)) 7)
+              marble-to-remove (.get circle remove-index)
+              next-index (next-clockwise-index circle remove-index)
+              current-marble (.get circle next-index)
+              player (mod m num-players)]
+          (println "quicker-play-circle |R| remove-index: " remove-index)
+          (println "quicker-play-circle |R| marble-to-remove: " marble-to-remove)
+          (println "quicker-play-circle |R| next-index: " next-index)
+          (println "quicker-play-circle |R| current-marble: " current-marble)
+          (println "quicker-play-circle |R| player: " player)
+          (do
+            (doto player-marbles (.put player (conj (.get player-marbles player) m marble-to-remove)))
+            ;(println "quicker-play-circle | player-marbles: " player-marbles)
+            (doto circle (.remove remove-index))
+            (swap! memo assoc :current-marble current-marble)))
+        (let [next-index (->> (.indexOf circle (:current-marble @memo))
+                              (next-clockwise-index circle))]
+          (println "quicker-play-circle |I| next-index: " next-index)
+          (doto circle (.add next-index m))
+          (swap! memo assoc :current-marble m))))
+    {:circle         circle
+     :player-marbles player-marbles
+     :high-score     (last (game-scores player-marbles))}))
