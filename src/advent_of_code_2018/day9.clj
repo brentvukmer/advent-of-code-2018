@@ -1,8 +1,7 @@
 (ns advent-of-code-2018.day9
   (:require [clojure.set :as set]
             [clojure.java.io :as io])
-  (:import (java.util Vector ArrayList HashMap)
-           (clojure.lang PersistentVector)
+  (:import (clojure.lang PersistentVector)
            (aoc.day9 CircleGameSolver)))
 
 (set! *warn-on-reflection* true)
