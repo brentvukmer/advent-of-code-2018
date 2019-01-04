@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static java.math.BigInteger.ZERO;
-import static java.math.BigInteger.valueOf;
-
 public class CircleGameSolver {
 
   private static boolean shouldTakeMarbles(int m) {
@@ -21,7 +18,7 @@ public class CircleGameSolver {
   public static Map<Keyword, Object> solveFor(int numPlayers, int maxMarbleValue) {
     IntBigList circle = new IntBigList();
     circle.add(0);
-    Map<Integer, BigInteger> playerScore = new HashMap<>(numPlayers);
+    Map<Integer, IntBigList> playerScores = new HashMap<>(numPlayers);
     int currentIndex = 0;
     int bound = maxMarbleValue + 1;
     for (int m = 1; m < bound; m++) {
@@ -30,10 +27,10 @@ public class CircleGameSolver {
         int removeIndex = Math.abs((currentIndex - 7) % circle.size());
         int removedMarble = circle.get(removeIndex);
         circle.remove(removeIndex);
-        playerScore.putIfAbsent(player, ZERO);
-        BigInteger updatedScore =
-            playerScore.get(player).add(valueOf(m)).add(valueOf(removedMarble));
-        playerScore.put(player, updatedScore);
+        playerScores.putIfAbsent(player, new IntBigList());
+        IntBigList scores = playerScores.get(player);
+        scores.add(m);
+        scores.add(removedMarble);
         currentIndex = removeIndex;
       } else {
         int nextIndex = ((currentIndex + 1) % circle.size()) + 1;
@@ -44,9 +41,22 @@ public class CircleGameSolver {
     Map<Keyword, Object> result = new HashMap<>();
     result.put(Keyword.intern(null, "circle"), circle);
     List<BigInteger> gameScores =
-        playerScore.values().stream().sorted().collect(Collectors.toList());
+        playerScores
+            .values()
+            .stream()
+            .map(
+                l -> {
+                  BigInteger sum = BigInteger.ZERO;
+                  for (int i = 0; i < l.size(); i++) {
+                    sum = sum.add(BigInteger.valueOf(l.get(i)));
+                  }
+                  return sum;
+                })
+            .sorted()
+            .collect(Collectors.toList());
+    result.put(Keyword.intern(null, "game-scores"), gameScores);
     result.put(Keyword.intern(null, "high-score"), gameScores.get(gameScores.size() - 1));
-    result.put(Keyword.intern(null, "player-marbles"), playerScore);
+    result.put(Keyword.intern(null, "player-marbles"), playerScores);
     return result;
   }
 }
