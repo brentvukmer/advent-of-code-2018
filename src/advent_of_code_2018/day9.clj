@@ -2,7 +2,8 @@
   (:require [clojure.set :as set]
             [clojure.java.io :as io])
   (:import (java.util Vector ArrayList HashMap)
-           (clojure.lang PersistentVector)))
+           (clojure.lang PersistentVector)
+           (aoc.day9 CircleGameSolver)))
 
 (set! *warn-on-reflection* true)
 
@@ -191,38 +192,10 @@
   ([path]
    (part1 path 0)))
 
-(defn quicker-play-circle
-  [num-players num-marbles]
-  (let [^ArrayList circle (new ArrayList num-marbles)
-        ^HashMap player-marbles (new HashMap num-players)
-        memo (atom {:current-marble 0})]
-    (doseq [p (range 0 num-players)]
-      (doto player-marbles (.put p [])))
-    (doto circle (.add 0))
-    (doseq [m (range 1 num-marbles)]
-      (println "quicker-play-circle | circle: " circle)
-      (println "quicker-play-circle | m: " m)
-      (if (take-marbles? m)
-        (let [remove-index (counter-clockwise-index circle (.indexOf circle (:current-marble @memo)) 7)
-              marble-to-remove (.get circle remove-index)
-              next-index (next-clockwise-index circle remove-index)
-              current-marble (.get circle next-index)
-              player (mod m num-players)]
-          (println "quicker-play-circle |R| remove-index: " remove-index)
-          (println "quicker-play-circle |R| marble-to-remove: " marble-to-remove)
-          (println "quicker-play-circle |R| next-index: " next-index)
-          (println "quicker-play-circle |R| current-marble: " current-marble)
-          (println "quicker-play-circle |R| player: " player)
-          (do
-            (doto player-marbles (.put player (conj (.get player-marbles player) m marble-to-remove)))
-            ;(println "quicker-play-circle | player-marbles: " player-marbles)
-            (doto circle (.remove remove-index))
-            (swap! memo assoc :current-marble current-marble)))
-        (let [next-index (->> (.indexOf circle (:current-marble @memo))
-                              (next-clockwise-index circle))]
-          (println "quicker-play-circle |I| next-index: " next-index)
-          (doto circle (.add next-index m))
-          (swap! memo assoc :current-marble m))))
-    {:circle         circle
-     :player-marbles player-marbles
-     :high-score     (last (game-scores player-marbles))}))
+(defn faster-play-circle
+  [num-players max-marbles]
+  (CircleGameSolver/solveFor num-players max-marbles))
+
+(defn part2
+  [num-players max-marbles]
+  (:high-score (faster-play-circle num-players max-marbles)))

@@ -5,5 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [quil "2.5.0"]
-                 [spyscope "0.1.6"]])
+                 [spyscope "0.1.6"]]
+  :plugins [[lein-virgil "0.1.8"]]
+  :source-paths      ["src/advent_of_code_2018"]
+  :java-source-paths ["src/java"])
 
