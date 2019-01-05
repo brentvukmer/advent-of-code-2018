@@ -193,7 +193,8 @@
 
 (defn faster-play-circle
   [num-players max-marbles]
-  (CircleGameSolver/solveFor num-players max-marbles))
+  (->> (CircleGameSolver/solveFor num-players max-marbles)
+       (into {})))
 
 (defn part2
   [num-players max-marbles]
