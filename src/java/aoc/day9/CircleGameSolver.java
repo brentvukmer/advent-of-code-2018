@@ -1,7 +1,8 @@
 package aoc.day9;
 
 import clojure.lang.Keyword;
-import org.magicwerk.brownies.collections.primitive.IntBigList;
+import clojure.lang.RT;
+import org.magicwerk.brownies.collections.primitive.LongBigList;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -11,52 +12,61 @@ import java.util.stream.Collectors;
 
 public class CircleGameSolver {
 
-  private static boolean shouldTakeMarbles(int m) {
-    return (m > 0) && (m % 23) == 0;
-  }
-
-  public static Map<Keyword, Object> solveFor(int numPlayers, int maxMarbleValue) {
-    IntBigList circle = new IntBigList();
-    circle.add(0);
-    Map<Integer, IntBigList> playerScores = new HashMap<>(numPlayers);
-    int currentIndex = 0;
-    int bound = maxMarbleValue + 1;
-    for (int m = 1; m < bound; m++) {
-      if (shouldTakeMarbles(m)) {
-        int player = m % numPlayers;
-        int removeIndex = Math.abs((currentIndex - 7) % circle.size());
-        int removedMarble = circle.get(removeIndex);
-        circle.remove(removeIndex);
-        playerScores.putIfAbsent(player, new IntBigList());
-        IntBigList scores = playerScores.get(player);
-        scores.add(m);
-        scores.add(removedMarble);
-        currentIndex = removeIndex;
-      } else {
-        int nextIndex = ((currentIndex + 1) % circle.size()) + 1;
-        circle.add(nextIndex, m);
-        currentIndex = nextIndex;
-      }
+    public static boolean shouldTakeMarbles(long m) {
+        return (m > 0) && (m % 23) == 0;
     }
-    Map<Keyword, Object> result = new HashMap<>();
-    result.put(Keyword.intern(null, "circle"), circle);
-    List<BigInteger> gameScores =
-        playerScores
-            .values()
-            .stream()
-            .map(
-                l -> {
-                  BigInteger sum = BigInteger.ZERO;
-                  for (int i = 0; i < l.size(); i++) {
-                    sum = sum.add(BigInteger.valueOf(l.get(i)));
-                  }
-                  return sum;
-                })
-            .sorted()
-            .collect(Collectors.toList());
-    result.put(Keyword.intern(null, "game-scores"), gameScores);
-    result.put(Keyword.intern(null, "high-score"), gameScores.get(gameScores.size() - 1));
-    result.put(Keyword.intern(null, "player-marbles"), playerScores);
-    return result;
-  }
+
+    public static Long gaussianMod(Long num, Long div) {
+        return (Long) RT.var("clojure.core", "mod").invoke(num, div);
+    }
+
+    public static Map<Keyword, Object> solveFor(int numPlayers, int maxMarbleValue) {
+        LongBigList circle = new LongBigList();
+        circle.add(0);
+        Map<Long, LongBigList> playerScores = new HashMap<>(numPlayers);
+        long currentIndex = 0;
+        long bound = maxMarbleValue + 1;
+        for (long m = 1; m < bound; m++) {
+            if (shouldTakeMarbles(m)) {
+                long player = gaussianMod(m, (long) numPlayers);
+                long removeIndex = gaussianMod((currentIndex - 7), (long) circle.size());
+                long removedMarble = circle.get((int) removeIndex);
+                circle.remove((int) removeIndex);
+                playerScores.putIfAbsent(player, new LongBigList());
+                LongBigList scores = playerScores.get(player);
+                scores.add(m);
+                scores.add(removedMarble);
+                long nextClockwiseMarble = circle.get((int) removeIndex);
+                currentIndex = removeIndex;
+            } else {
+                long nextIndex = getNextClockwiseIndex(circle, currentIndex) + 1;
+                circle.add((int) nextIndex, m);
+                currentIndex = nextIndex;
+            }
+        }
+        Map<Keyword, Object> result = new HashMap<>();
+        result.put(Keyword.intern(null, "circle"), circle);
+        List<BigInteger> gameScores =
+                playerScores
+                        .values()
+                        .stream()
+                        .map(
+                                l -> {
+                                    BigInteger sum = BigInteger.ZERO;
+                                    for (int i = 0; i < l.size(); i++) {
+                                        sum = sum.add(BigInteger.valueOf(l.get(i)));
+                                    }
+                                    return sum;
+                                })
+                        .sorted()
+                        .collect(Collectors.toList());
+        result.put(Keyword.intern(null, "game-scores"), gameScores);
+        result.put(Keyword.intern(null, "high-score"), gameScores.get(gameScores.size() - 1));
+        result.put(Keyword.intern(null, "player-marbles"), playerScores);
+        return result;
+    }
+
+    private static long getNextClockwiseIndex(LongBigList circle, long currentIndex) {
+        return gaussianMod((currentIndex + 1), (long) circle.size());
+    }
 }

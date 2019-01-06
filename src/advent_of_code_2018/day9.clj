@@ -127,7 +127,7 @@
   (and (pos-int? m)
        (= 0 (mod m 23))))
 
-(defn play-circle
+(defn take-circle-turn
   [{:keys [circle current-marble marbles player-marbles player num-players num-marbles]}]
   (let [current-player (if player
                          (mod (inc player) num-players)
@@ -163,14 +163,16 @@
        sort))
 
 (defn initial-state
-  [{:keys [num-players num-marbles]}]
-  {:circle         [0],
-   :current-marble 0,
-   :marbles        (range 1 num-marbles),
-   :player-marbles {},
-   :player         nil,
-   :num-players    num-players
-   :num-marbles    num-marbles})
+  ([num-players num-marbles]
+   {:circle         [0],
+    :current-marble 0,
+    :marbles        (range 1 num-marbles),
+    :player-marbles {},
+    :player         nil,
+    :num-players    num-players
+    :num-marbles    num-marbles})
+  ([{:keys [num-players num-marbles]}]
+   (initial-state num-players num-marbles)))
 
 (defn data-at
   [path r]
@@ -178,24 +180,29 @@
       (get r)
       initial-state))
 
+(defn play-game
+  [state-zero]
+  (->> state-zero
+       (iterate take-circle-turn)
+       (take (:num-marbles state-zero))
+       last))
+
 (defn part1
   ([path r]
    (let [state-zero (data-at path r)]
      (->> state-zero
-          (iterate play-circle)
-          (take (:num-marbles state-zero))
-          last
+          play-game
           :player-marbles
           game-scores
           last)))
   ([path]
    (part1 path 0)))
 
-(defn faster-play-circle
+(defn faster-play-game
   [num-players max-marbles]
   (->> (CircleGameSolver/solveFor num-players max-marbles)
        (into {})))
 
 (defn part2
   [num-players max-marbles]
-  (:high-score (faster-play-circle num-players max-marbles)))
+  (:high-score (faster-play-game num-players max-marbles)))

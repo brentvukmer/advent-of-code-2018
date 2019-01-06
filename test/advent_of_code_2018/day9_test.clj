@@ -26,6 +26,12 @@
   (testing "Testing 13 players 7999 max marbles value."
     (is (= 37305 (part2 30 5807)))))
 
+; Verify that we get the same answer for part1 prod inputs
 (deftest test-476-71657
   (testing "Testing 13 players 7999 max marbles value."
     (is (= 386018 (part2 476 71657)))))
+
+(deftest test-476-100-times-71657
+  (testing "Testing 13 players 7999 max marbles value."
+    (is (= 3085518618 (part2 476 (* 100 71657))))))
+
